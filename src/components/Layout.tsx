@@ -17,16 +17,17 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { signOut } from "@/lib/auth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface NavLinkProps {
   to: string;
   icon: React.ReactNode;
   label: string;
   active: boolean;
+  onClick?: () => void;
 }
 
-const NavLink: React.FC<NavLinkProps> = ({ to, icon, label, active }) => {
+const NavLink: React.FC<NavLinkProps> = ({ to, icon, label, active, onClick }) => {
   return (
     <Link
       to={to}
@@ -36,6 +37,7 @@ const NavLink: React.FC<NavLinkProps> = ({ to, icon, label, active }) => {
           ? "bg-primary/20 text-primary"
           : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
       )}
+      onClick={onClick}
     >
       {icon}
       <span>{label}</span>
@@ -52,12 +54,41 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  
+  // Ensure menu is properly initialized in new tabs
+  useEffect(() => {
+    // We need to handle the initial state properly for new tabs
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setMenuOpen(true);
+      } else {
+        setMenuOpen(false);
+      }
+    };
+    
+    // Set initial state
+    handleResize();
+    
+    // Add event listener for window resize
+    window.addEventListener('resize', handleResize);
+    
+    // Clean up the event listener on component unmount
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   if (!user) {
     return <>{children}</>;
   }
 
   const toggleMenu = () => setMenuOpen(prev => !prev);
+  
+  const closeMenu = () => {
+    if (window.innerWidth < 768) {
+      setMenuOpen(false);
+    }
+  };
 
   const routes = [
     { path: "/", label: "Início", icon: <Home size={20} /> },
@@ -70,7 +101,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   ];
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-background w-full">
       {/* Mobile menu button */}
       <button
         className="fixed top-4 left-4 z-50 p-2 rounded-full bg-background border border-border md:hidden"
@@ -102,6 +133,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 icon={route.icon}
                 label={route.label}
                 active={location.pathname === route.path}
+                onClick={closeMenu}
               />
             ))}
           </nav>
