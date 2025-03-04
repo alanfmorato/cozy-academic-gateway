@@ -130,26 +130,30 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
           </div>
           
           {!exploringUniversities && (
-            <Select
-              value={university}
-              onValueChange={setUniversity}
-              disabled={isLoading || exploringUniversities}
-            >
-              <SelectTrigger className="pl-10">
-                <SelectValue placeholder="Selecione sua universidade" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="usp">Universidade de São Paulo</SelectItem>
-                <SelectItem value="unicamp">Universidade Estadual de Campinas</SelectItem>
-                <SelectItem value="ufrj">Universidade Federal do Rio de Janeiro</SelectItem>
-                <SelectItem value="unb">Universidade de Brasília</SelectItem>
-                <SelectItem value="ufmg">Universidade Federal de Minas Gerais</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="relative">
+              <Select
+                value={university}
+                onValueChange={setUniversity}
+                disabled={isLoading || exploringUniversities}
+              >
+                <SelectTrigger className="pl-10">
+                  <SelectValue placeholder="Selecione sua universidade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="usp">Universidade de São Paulo</SelectItem>
+                  <SelectItem value="unicamp">Universidade Estadual de Campinas</SelectItem>
+                  <SelectItem value="ufrj">Universidade Federal do Rio de Janeiro</SelectItem>
+                  <SelectItem value="unb">Universidade de Brasília</SelectItem>
+                  <SelectItem value="ufmg">Universidade Federal de Minas Gerais</SelectItem>
+                  <SelectItem value="ufsc">Universidade Federal de Santa Catarina</SelectItem>
+                  <SelectItem value="ufrgs">Universidade Federal do Rio Grande do Sul</SelectItem>
+                  <SelectItem value="ufc">Universidade Federal do Ceará</SelectItem>
+                  <SelectItem value="ufba">Universidade Federal da Bahia</SelectItem>
+                </SelectContent>
+              </Select>
+              <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            </div>
           )}
-          <div className="absolute left-3 top-[2.3rem] transform -translate-y-1/2 h-4 w-4 text-muted-foreground">
-            <Building className="h-4 w-4" />
-          </div>
         </div>
 
         <div className="space-y-2">
