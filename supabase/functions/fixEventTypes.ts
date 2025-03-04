@@ -29,7 +29,7 @@ serve(async (req) => {
 
     console.log('Existing event types:', existingEvents);
 
-    // Valid event types array - must match what's in the frontend
+    // Valid event types array - MUST EXACTLY match what's in the frontend
     const validEventTypes = [
       "Festa",
       "Palestra",
@@ -41,7 +41,10 @@ serve(async (req) => {
       "Outro"
     ];
     
-    // Update the constraint - requires direct SQL execution with service role
+    // Generate the SQL IN clause string with proper quoting
+    const eventTypesForSql = validEventTypes.map(type => `'${type}'`).join(', ');
+    
+    // Update the constraint using parameterized SQL with the exact values
     const { error: alterError } = await supabaseAdmin.rpc('execute_sql', {
       query: `
         ALTER TABLE public.eventos 
@@ -49,7 +52,7 @@ serve(async (req) => {
         
         ALTER TABLE public.eventos 
         ADD CONSTRAINT eventos_tipo_evento_check 
-        CHECK (tipo_evento IN ('Festa', 'Palestra', 'Workshop', 'Seminário', 'Conferência', 'Encontro', 'Curso', 'Outro'));
+        CHECK (tipo_evento IN (${eventTypesForSql}));
       `
     });
 

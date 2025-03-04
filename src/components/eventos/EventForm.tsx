@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -31,6 +30,7 @@ interface EventFormProps {
 }
 
 // Define os tipos de evento exatamente como devem estar na base de dados
+// IMPORTANT: This array MUST match the constraint in the database exactly
 export const tiposEvento = [
   "Festa",
   "Palestra",
@@ -59,6 +59,37 @@ const EventForm: React.FC<EventFormProps> = ({
   const [formLoading, setFormLoading] = useState(false);
   const [universidadeLoading, setUniversidadeLoading] = useState(false);
   const [tiposEventoDb, setTiposEventoDb] = useState<string[]>([]);
+  const [constraintUpdated, setConstraintUpdated] = useState(false);
+
+  // Execute the edge function to fix event types constraint in the database
+  useEffect(() => {
+    const updateEventTypesConstraint = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('fixEventTypes');
+        
+        if (error) {
+          console.error('Error updating event types constraint:', error);
+          return;
+        }
+        
+        if (data?.success) {
+          console.log('Event types constraint updated successfully:', data.validEventTypes);
+          setConstraintUpdated(true);
+          toast({
+            title: "Sistema atualizado",
+            description: "Tipos de evento foram atualizados no sistema.",
+          });
+        }
+      } catch (error) {
+        console.error('Error calling fixEventTypes function:', error);
+      }
+    };
+
+    // Only run once when the form opens
+    if (open && !constraintUpdated) {
+      updateEventTypesConstraint();
+    }
+  }, [open, constraintUpdated]);
 
   // Carregar os tipos de evento válidos do banco de dados
   useEffect(() => {
