@@ -83,6 +83,7 @@ export const signOut = async () => {
   try {
     const { error } = await supabase.auth.signOut();
     if (error) {
+      console.error("Erro ao fazer logout:", error);
       toast({
         variant: "destructive",
         title: "Erro ao sair",
@@ -97,6 +98,7 @@ export const signOut = async () => {
     });
     return { success: true };
   } catch (error: any) {
+    console.error("Exceção ao fazer logout:", error);
     toast({
       variant: "destructive",
       title: "Erro inesperado",

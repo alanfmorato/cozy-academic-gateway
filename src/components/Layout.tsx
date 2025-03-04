@@ -50,10 +50,21 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const { user } = useAuth();
+  const { user, isLoading, checkSession } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sessionChecked, setSessionChecked] = useState(false);
+  
+  // Verificar a sessão ao montar o componente ou ao mudar de página
+  useEffect(() => {
+    const verifySession = async () => {
+      await checkSession();
+      setSessionChecked(true);
+    };
+    
+    verifySession();
+  }, [checkSession, location.pathname]);
   
   // Ensure menu is properly initialized in new tabs
   useEffect(() => {
@@ -78,6 +89,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     };
   }, []);
 
+  // Mostrar um estado de carregamento enquanto verificamos a autenticação
+  if (isLoading || !sessionChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-xl">Carregando...</div>
+      </div>
+    );
+  }
+
   if (!user) {
     return <>{children}</>;
   }
@@ -88,6 +108,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (window.innerWidth < 768) {
       setMenuOpen(false);
     }
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/auth');
   };
 
   const routes = [
@@ -155,7 +180,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <Button
               variant="destructive"
               className="w-full"
-              onClick={signOut}
+              onClick={handleLogout}
               size="sm"
             >
               <LogOut size={16} className="mr-2" />
