@@ -68,8 +68,13 @@ export const useEventForm = (
         }
 
         if (data && data.length > 0) {
-          // Extrair tipos de evento únicos
-          const tipos = [...new Set(data.map(item => item.tipo_evento).filter(Boolean))];
+          // Extrair tipos de evento únicos com tipagem correta
+          const tipos: string[] = [...new Set(
+            data
+              .map((item: { tipo_evento: string }) => item.tipo_evento)
+              .filter(Boolean)
+          )];
+          
           if (tipos.length > 0) {
             console.log('Tipos de evento encontrados no banco:', tipos);
             setTiposEventoDb(tipos);
