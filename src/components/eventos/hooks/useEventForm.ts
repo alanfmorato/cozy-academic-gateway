@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { tiposEvento, updateEventTypesConstraint } from "../utils/eventTypes";
 import { useUniversityCreation } from "./useUniversityCreation";
@@ -9,6 +8,10 @@ interface FormData {
   descricao: string;
   data_hora: string;
   localizacao: string;
+  tipo_evento: string;
+}
+
+interface EventoRecord {
   tipo_evento: string;
 }
 
@@ -25,7 +28,7 @@ export const useEventForm = (
     descricao: "",
     data_hora: "",
     localizacao: "",
-    tipo_evento: tiposEvento[0], // Define um valor válido inicial
+    tipo_evento: tiposEvento[0],
   });
   
   const [formLoading, setFormLoading] = useState(false);
@@ -34,7 +37,6 @@ export const useEventForm = (
   
   const { universidadeLoading, verificaECriaUniversidade } = useUniversityCreation(supabase);
 
-  // Execute the edge function to fix event types constraint in the database
   useEffect(() => {
     const runUpdate = async () => {
       if (open && !constraintUpdated) {
@@ -52,11 +54,9 @@ export const useEventForm = (
     runUpdate();
   }, [open, constraintUpdated, supabase]);
 
-  // Carregar os tipos de evento válidos do banco de dados
   useEffect(() => {
     const fetchAllowedEventTypes = async () => {
       try {
-        // Teste com um evento que sabemos que funcionou
         const { data, error } = await supabase
           .from('eventos')
           .select('tipo_evento')
@@ -68,10 +68,11 @@ export const useEventForm = (
         }
 
         if (data && data.length > 0) {
-          // Extrair tipos de evento únicos com tipagem correta
+          const eventRecords = data as EventoRecord[];
+          
           const tipos: string[] = [...new Set(
-            data
-              .map((item: { tipo_evento: string }) => item.tipo_evento)
+            eventRecords
+              .map(item => item.tipo_evento)
               .filter(Boolean)
           )];
           
@@ -101,7 +102,6 @@ export const useEventForm = (
   const handleSelectChange = (value: string) => {
     console.log(`Tipo de evento selecionado: "${value}"`);
     
-    // Certifique-se de que é um valor permitido
     if (tiposEvento.includes(value)) {
       setFormData((prev) => ({
         ...prev,
@@ -137,7 +137,6 @@ export const useEventForm = (
       return;
     }
 
-    // Verificar se o tipo do evento está dentro das opções permitidas
     if (!formData.tipo_evento || !tiposEvento.includes(formData.tipo_evento)) {
       toast({
         variant: "destructive",
@@ -149,7 +148,6 @@ export const useEventForm = (
 
     setFormLoading(true);
     try {
-      // Verificar e criar a universidade se necessário antes de publicar o evento
       const universidadeId = await verificaECriaUniversidade(userUniversity);
 
       if (!universidadeId) {
@@ -158,7 +156,6 @@ export const useEventForm = (
         );
       }
 
-      // Criando o objeto do evento com um tipo válido garantido
       const tipoEventoValido = formData.tipo_evento;
       console.log(`Tipo de evento a ser enviado: "${tipoEventoValido}"`);
 
@@ -192,7 +189,7 @@ export const useEventForm = (
         descricao: "",
         data_hora: "",
         localizacao: "",
-        tipo_evento: tiposEvento[0], // Reset to a valid default
+        tipo_evento: tiposEvento[0],
       });
       onEventCreated();
     } catch (error: any) {
