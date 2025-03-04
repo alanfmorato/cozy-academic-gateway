@@ -26,3 +26,53 @@ export interface MoradiaFormData {
   whatsapp: string;
 }
 
+// New interfaces for Marketplace and Materials
+export interface Produto {
+  id: string;
+  titulo: string;
+  descricao: string;
+  valor: number;
+  imagens: string[] | null;
+  usuario_id: string;
+  universidade_id: string;
+  universidade?: {
+    nome: string;
+    sigla: string;
+  };
+  updated_at: string;
+  whatsapp?: string;
+}
+
+export interface ProdutoFormData {
+  titulo: string;
+  descricao: string;
+  valor: number;
+  whatsapp: string;
+}
+
+export interface Material {
+  id: string;
+  titulo: string;
+  descricao: string | null;
+  arquivo_url: string | null;
+  usuario_id: string;
+  curso_id: string | null;
+  universidade_id: string;
+  curso?: {
+    nome: string;
+  };
+  universidade?: {
+    nome: string;
+    sigla: string;
+  };
+  updated_at: string;
+  whatsapp?: string;
+}
+
+export interface MaterialFormData {
+  titulo: string;
+  descricao: string;
+  curso_id: string;
+  arquivo_url: string;
+  whatsapp: string;
+}

@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { Search, ShoppingCart, Tag, Plus, Building, Info } from "lucide-react";
+import { Search, ShoppingCart, Tag, Plus, Building, Info, Phone } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,23 +12,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Produto } from "@/types/moradia";
 
-interface Produto {
-  id: string;
-  titulo: string;
-  descricao: string;
-  valor: number;
-  imagens: string[] | null;
-  usuario_id: string;
-  universidade_id: string;
-  universidade?: {
-    nome: string;
-    sigla: string;
-  };
-  updated_at: string;
-}
-
-// Dados de demonstração para usar quando não houver produtos reais
 const produtosDemo: Produto[] = [
   {
     id: "demo1",
@@ -109,6 +93,7 @@ const Marketplace = () => {
     titulo: "",
     descricao: "",
     valor: 0,
+    whatsapp: "",
   });
   const [formLoading, setFormLoading] = useState(false);
   const [usandoDadosDemo, setUsandoDadosDemo] = useState(false);
@@ -130,7 +115,6 @@ const Marketplace = () => {
 
       if (error) throw error;
       
-      // Se não houver produtos ou se a lista estiver vazia, usar dados de demo
       if (!data || data.length === 0) {
         setProdutos(produtosDemo);
         setUsandoDadosDemo(true);
@@ -140,7 +124,6 @@ const Marketplace = () => {
       }
     } catch (error: any) {
       console.error("Erro ao carregar produtos:", error);
-      // Em caso de erro, mostrar produtos demo
       setProdutos(produtosDemo);
       setUsandoDadosDemo(true);
       
@@ -176,7 +159,6 @@ const Marketplace = () => {
 
     setFormLoading(true);
     try {
-      // Buscando o ID da universidade do usuário
       const { data: uniData, error: uniError } = await supabase
         .from("universidades")
         .select("id")
@@ -207,6 +189,7 @@ const Marketplace = () => {
         titulo: "",
         descricao: "",
         valor: 0,
+        whatsapp: "",
       });
       fetchProdutos();
     } catch (error: any) {
@@ -229,19 +212,20 @@ const Marketplace = () => {
       return;
     }
     
-    if (!user) {
+    if (!produto.whatsapp) {
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Você precisa estar logado para demonstrar interesse.",
+        description: "Número de WhatsApp não disponível para este anúncio."
       });
       return;
     }
     
-    toast({
-      title: "Interesse registrado",
-      description: `Você demonstrou interesse em: ${produto.titulo}`,
-    });
+    const formattedNumber = produto.whatsapp.replace(/\D/g, "");
+    
+    const whatsappUrl = `https://wa.me/${formattedNumber}?text=Olá! Vi seu anúncio de produto na plataforma e gostaria de mais informações sobre "${produto.titulo}".`;
+    
+    window.open(whatsappUrl, "_blank");
   };
 
   const filteredProdutos = produtos.filter(produto =>
@@ -272,7 +256,7 @@ const Marketplace = () => {
               <Plus className="mr-2 h-4 w-4" /> Novo Produto
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[550px]">
+          <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
             <form onSubmit={handleSubmit}>
               <DialogHeader>
                 <DialogTitle>Publicar Novo Produto</DialogTitle>
@@ -317,6 +301,20 @@ const Marketplace = () => {
                     onChange={handleInputChange}
                     required
                   />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="whatsapp">WhatsApp para contato</Label>
+                  <Input
+                    id="whatsapp"
+                    name="whatsapp"
+                    placeholder="Ex: +5511999999999"
+                    value={formData.whatsapp}
+                    onChange={handleInputChange}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Inclua o código do país (Ex: +55 para Brasil)
+                  </p>
                 </div>
               </div>
               <DialogFooter>
@@ -403,8 +401,8 @@ const Marketplace = () => {
                   className="w-full"
                   onClick={() => handleInteresse(produto)}
                 >
-                  <Tag className="mr-2 h-4 w-4" />
-                  Tenho interesse
+                  <Phone className="mr-2 h-4 w-4" />
+                  Entrar em contato
                 </Button>
               </CardFooter>
             </Card>

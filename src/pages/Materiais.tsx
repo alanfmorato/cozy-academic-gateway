@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { Search, FileText, Folder, BookOpen, Download, Plus, ExternalLink } from "lucide-react";
+import { Search, FileText, Folder, BookOpen, ExternalLink, Plus, Phone } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,28 +11,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Material } from "@/types/moradia";
 
 interface Curso {
   id: string;
   nome: string;
-}
-
-interface Material {
-  id: string;
-  titulo: string;
-  descricao: string | null;
-  arquivo_url: string | null;
-  usuario_id: string;
-  curso_id: string | null;
-  universidade_id: string;
-  curso?: {
-    nome: string;
-  };
-  universidade?: {
-    nome: string;
-    sigla: string;
-  };
-  updated_at: string;
 }
 
 const Materiais = () => {
@@ -49,6 +31,7 @@ const Materiais = () => {
     descricao: "",
     curso_id: "",
     arquivo_url: "",
+    whatsapp: "",
   });
   const [formLoading, setFormLoading] = useState(false);
 
@@ -59,7 +42,6 @@ const Materiais = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Buscar cursos
       const { data: cursosData, error: cursosError } = await supabase
         .from("cursos")
         .select("id, nome")
@@ -68,7 +50,6 @@ const Materiais = () => {
       if (cursosError) throw cursosError;
       setCursos(cursosData);
 
-      // Buscar materiais
       const { data: materiaisData, error: materiaisError } = await supabase
         .from("materiais")
         .select(`
@@ -113,7 +94,6 @@ const Materiais = () => {
 
     setFormLoading(true);
     try {
-      // Buscando o ID da universidade do usuário
       const { data: uniData, error: uniError } = await supabase
         .from("universidades")
         .select("id")
@@ -146,6 +126,7 @@ const Materiais = () => {
         descricao: "",
         curso_id: "",
         arquivo_url: "",
+        whatsapp: "",
       });
       fetchData();
     } catch (error: any) {
@@ -157,6 +138,23 @@ const Materiais = () => {
     } finally {
       setFormLoading(false);
     }
+  };
+
+  const handleContact = (material: Material) => {
+    if (!material.whatsapp) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Número de WhatsApp não disponível para este material."
+      });
+      return;
+    }
+    
+    const formattedNumber = material.whatsapp.replace(/\D/g, "");
+    
+    const whatsappUrl = `https://wa.me/${formattedNumber}?text=Olá! Vi seu material compartilhado na plataforma e gostaria de mais informações sobre "${material.titulo}".`;
+    
+    window.open(whatsappUrl, "_blank");
   };
 
   const filteredMateriais = materiais.filter(material => {
@@ -186,7 +184,7 @@ const Materiais = () => {
               <Plus className="mr-2 h-4 w-4" /> Novo Material
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[550px]">
+          <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
             <form onSubmit={handleSubmit}>
               <DialogHeader>
                 <DialogTitle>Compartilhar Material</DialogTitle>
@@ -244,6 +242,20 @@ const Materiais = () => {
                   />
                   <p className="text-xs text-muted-foreground">
                     Cole um link de compartilhamento para o seu material.
+                  </p>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="whatsapp">WhatsApp para contato</Label>
+                  <Input
+                    id="whatsapp"
+                    name="whatsapp"
+                    placeholder="Ex: +5511999999999"
+                    value={formData.whatsapp}
+                    onChange={handleInputChange}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Inclua o código do país (Ex: +55 para Brasil)
                   </p>
                 </div>
               </div>
@@ -344,25 +356,33 @@ const Materiais = () => {
                   <span>Material acadêmico</span>
                 </div>
               </CardContent>
-              <CardFooter>
+              <CardFooter className="flex gap-2">
                 {material.arquivo_url ? (
                   <a 
                     href={material.arquivo_url} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="w-full"
+                    className="flex-1"
                   >
-                    <Button size="sm" className="w-full">
+                    <Button size="sm" className="w-full" variant="outline">
                       <ExternalLink className="mr-2 h-4 w-4" />
                       Acessar Material
                     </Button>
                   </a>
                 ) : (
-                  <Button size="sm" className="w-full" disabled>
-                    <Download className="mr-2 h-4 w-4" />
+                  <Button size="sm" className="flex-1" variant="outline" disabled>
+                    <ExternalLink className="mr-2 h-4 w-4" />
                     Sem arquivo disponível
                   </Button>
                 )}
+                <Button 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={() => handleContact(material)}
+                >
+                  <Phone className="mr-2 h-4 w-4" />
+                  Contato
+                </Button>
               </CardFooter>
             </Card>
           ))}
