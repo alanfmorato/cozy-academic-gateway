@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { signOut } from "@/lib/auth";
 import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface NavLinkProps {
   to: string;
@@ -54,6 +55,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
+  const { toast } = useToast();
   
   useEffect(() => {
     const verifySession = async () => {
