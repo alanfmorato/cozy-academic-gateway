@@ -12,12 +12,14 @@ export interface AuthFormData {
 
 export const signIn = async ({ email, password }: AuthFormData) => {
   try {
+    console.log("Attempting to sign in with email:", email);
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
+      console.error("Login error:", error);
       toast({
         variant: "destructive",
         title: "Erro ao entrar",
@@ -26,12 +28,14 @@ export const signIn = async ({ email, password }: AuthFormData) => {
       return { success: false, error };
     }
 
+    console.log("Login successful, session created:", !!data.session);
     toast({
       title: "Login realizado com sucesso",
       description: "Bem-vindo de volta!",
     });
     return { success: true, data };
   } catch (error: any) {
+    console.error("Unexpected login error:", error);
     toast({
       variant: "destructive",
       title: "Erro inesperado",

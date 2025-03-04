@@ -27,6 +27,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const navigate = useNavigate();
   const location = useLocation();
   const sessionCheckRef = useRef<boolean>(false);
+  const authChangeHandled = useRef<boolean>(false);
 
   // Memoized function to check the current session
   const checkSession = useCallback(async () => {
@@ -67,36 +68,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [session]);
 
+  // Force navigation when session changes
+  const handleAuthChange = useCallback((newSession: Session | null) => {
+    console.log("Handling auth change, session exists:", !!newSession);
+    
+    if (newSession && location.pathname === "/auth") {
+      console.log("Redirecting to home page after login");
+      navigate("/", { replace: true });
+    } else if (!newSession && location.pathname !== "/auth") {
+      console.log("Redirecting to auth page after logout");
+      navigate("/auth", { replace: true });
+    }
+  }, [navigate, location.pathname]);
+
   // Redirect logic based on auth state and current location
   useEffect(() => {
     if (!initialized) return;
     
-    if (!session && location.pathname !== "/auth") {
-      console.log("No session, redirecting to /auth");
-      navigate("/auth");
-    }
-  }, [session, location.pathname, initialized, navigate]);
+    handleAuthChange(session);
+  }, [session, initialized, handleAuthChange]);
 
   // Check session and setup auth listener only once on component mount
   useEffect(() => {
     const initAuth = async () => {
       if (!initialized) {
-        await checkSession();
+        const currentSession = await checkSession();
+        
+        // Handle initial navigation
+        if (currentSession && location.pathname === "/auth") {
+          console.log("Initial redirect to home page");
+          navigate("/", { replace: true });
+        }
       }
       
       // Setup listener for auth state changes
       const { data: authListener } = supabase.auth.onAuthStateChange(
         async (event, newSession) => {
           console.log("Auth state changed:", event);
+          authChangeHandled.current = true;
           
           setSession(newSession);
           setUser(newSession?.user || null);
           
           // Handle redirects based on auth events
           if (event === "SIGNED_IN" && location.pathname === "/auth") {
-            navigate("/");
+            console.log("User signed in, redirecting to home");
+            navigate("/", { replace: true });
           } else if (event === "SIGNED_OUT") {
-            navigate("/auth");
+            console.log("User signed out, redirecting to auth");
+            navigate("/auth", { replace: true });
           }
         }
       );

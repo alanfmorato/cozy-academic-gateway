@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Mail, Lock } from "lucide-react";
 import { signIn, resetPassword } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 
 interface LoginFormProps {
   onSwitchToRegister: () => void;
@@ -17,6 +19,16 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { session } = useAuth();
+
+  // Check if user is already logged in
+  useEffect(() => {
+    if (session) {
+      console.log("User already has session in LoginForm, redirecting to home");
+      navigate("/", { replace: true });
+    }
+  }, [session, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +44,10 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
       return;
     }
 
-    await signIn({ email, password });
+    const result = await signIn({ email, password });
+    console.log("Login result:", result.success ? "Success" : "Failed");
+    
+    // No need to navigate here, the AuthContext will handle it
     setIsLoading(false);
   };
 
