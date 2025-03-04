@@ -1,34 +1,62 @@
 
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { motion } from "framer-motion";
+import { useAuth } from "@/context/AuthContext";
+import { signOut } from "@/lib/auth";
 
 const Index = () => {
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#0f172a] to-[#1e293b] p-4">
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -left-40 w-80 h-80 rounded-full bg-blue-600/20 blur-[100px]" />
-        <div className="absolute top-1/3 -right-40 w-80 h-80 rounded-full bg-purple-600/20 blur-[100px]" />
-        <div className="absolute -bottom-40 left-1/3 w-80 h-80 rounded-full bg-indigo-600/20 blur-[100px]" />
+  const { user, isLoading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      navigate("/auth");
+    }
+  }, [user, isLoading, navigate]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-xl">Carregando...</div>
       </div>
-      
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="text-center space-y-8 z-10"
-      >
-        <h1 className="text-4xl font-bold">AcademicPortal</h1>
-        <p className="text-xl text-muted-foreground max-w-md">
-          Plataforma integrada para o ambiente universitário
-        </p>
-        <Link to="/auth">
-          <Button size="lg" className="mt-4">
-            Acessar Plataforma
-          </Button>
-        </Link>
-      </motion.div>
+    );
+  }
+
+  if (!user) {
+    return null; // Será redirecionado pelo useEffect
+  }
+
+  return (
+    <div className="container mx-auto p-8">
+      <div className="w-full max-w-md mx-auto space-y-6">
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-bold">Bem-vindo ao NewsUniversity</h1>
+          <p className="text-muted-foreground">
+            Olá, {user.user_metadata.full_name || user.email}
+          </p>
+        </div>
+
+        <div className="p-6 rounded-lg border bg-card shadow-sm">
+          <h2 className="text-xl font-semibold mb-4">Sua conta</h2>
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-4">
+              <span className="font-medium">Email:</span>
+              <span className="col-span-2">{user.email}</span>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <span className="font-medium">Universidade:</span>
+              <span className="col-span-2">
+                {user.user_metadata.university || "Não informada"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <Button variant="destructive" className="w-full" onClick={signOut}>
+          Sair
+        </Button>
+      </div>
     </div>
   );
 };
