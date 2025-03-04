@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Home, LogIn, Plus } from "lucide-react";
+import { Home, LogIn, Plus, Upload } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -24,6 +23,7 @@ const initialFormData: MoradiaFormData = {
   qtd_moradores: 1,
   localizacao: "",
   servicos: "",
+  whatsapp: "",
 };
 
 export const MoradiaForm: React.FC<MoradiaFormProps> = ({ 
@@ -35,10 +35,12 @@ export const MoradiaForm: React.FC<MoradiaFormProps> = ({
   const [formData, setFormData] = useState<MoradiaFormData>(initialFormData);
   const [loading, setLoading] = useState(false);
   const [universidadeLoading, setUniversidadeLoading] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<FileList | null>(null);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Verifica e cria a universidade se necessário quando o componente for montado e o usuário estiver logado
     if (user && user.user_metadata.university && user.user_metadata.university !== "explorando") {
       verificaECriaUniversidade(user.user_metadata.university);
     }
@@ -49,7 +51,6 @@ export const MoradiaForm: React.FC<MoradiaFormProps> = ({
     
     setUniversidadeLoading(true);
     try {
-      // Verifica se a universidade já existe
       const { data: existingUni, error: checkError } = await supabase
         .from("universidades")
         .select("id")
@@ -61,11 +62,9 @@ export const MoradiaForm: React.FC<MoradiaFormProps> = ({
         return;
       }
 
-      // Se a universidade não existir, criamos uma nova
       if (!existingUni) {
         console.log(`Universidade com sigla ${sigla} não encontrada. Criando uma nova.`);
         
-        // Mapeamento das siglas para nomes completos
         const uniNomes: Record<string, [string, string, string]> = {
           usp: ["Universidade de São Paulo", "São Paulo", "SP"],
           unicamp: ["Universidade Estadual de Campinas", "Campinas", "SP"],
@@ -85,7 +84,6 @@ export const MoradiaForm: React.FC<MoradiaFormProps> = ({
 
         const [nome, cidade, estado] = uniNomes[sigla];
         
-        // Inserir a nova universidade
         const { data: newUni, error: insertError } = await supabase
           .from("universidades")
           .insert({
@@ -121,6 +119,53 @@ export const MoradiaForm: React.FC<MoradiaFormProps> = ({
     }));
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setSelectedImages(e.target.files);
+      
+      const urls = Array.from(e.target.files).map(file => URL.createObjectURL(file));
+      setImageUrls(urls);
+    }
+  };
+
+  const uploadImages = async () => {
+    if (!selectedImages || selectedImages.length === 0) return [];
+    
+    setUploadingImages(true);
+    try {
+      const uploadedUrls = [];
+      
+      for (let i = 0; i < selectedImages.length; i++) {
+        const file = selectedImages[i];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${crypto.randomUUID()}.${fileExt}`;
+        const filePath = `moradias/${fileName}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('public')
+          .upload(filePath, file);
+        
+        if (uploadError) {
+          console.error('Error uploading image:', uploadError);
+          continue;
+        }
+        
+        const { data } = supabase.storage
+          .from('public')
+          .getPublicUrl(filePath);
+          
+        uploadedUrls.push(data.publicUrl);
+      }
+      
+      return uploadedUrls;
+    } catch (error) {
+      console.error('Error uploading images:', error);
+      return [];
+    } finally {
+      setUploadingImages(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -133,7 +178,6 @@ export const MoradiaForm: React.FC<MoradiaFormProps> = ({
       return;
     }
 
-    // Verificar se o usuário tem uma universidade associada
     if (!user.user_metadata.university || user.user_metadata.university === "explorando") {
       toast({
         variant: "destructive",
@@ -143,12 +187,10 @@ export const MoradiaForm: React.FC<MoradiaFormProps> = ({
       return;
     }
 
-    // Verificar e criar a universidade se necessário antes de publicar a moradia
     await verificaECriaUniversidade(user.user_metadata.university);
 
     setLoading(true);
     try {
-      // Buscando o ID da universidade do usuário
       const { data: uniData, error: uniError } = await supabase
         .from("universidades")
         .select("id")
@@ -164,10 +206,13 @@ export const MoradiaForm: React.FC<MoradiaFormProps> = ({
         throw new Error(`Universidade não encontrada com a sigla: ${user.user_metadata.university}`);
       }
 
+      const uploadedImageUrls = await uploadImages();
+
       const novaMoradia = {
         ...formData,
         usuario_id: user.id,
         universidade_id: uniData.id,
+        imagens: uploadedImageUrls.length > 0 ? uploadedImageUrls : null
       };
 
       console.log("Tentando inserir moradia:", novaMoradia);
@@ -188,6 +233,8 @@ export const MoradiaForm: React.FC<MoradiaFormProps> = ({
       
       setOpen(false);
       setFormData(initialFormData);
+      setSelectedImages(null);
+      setImageUrls([]);
       onMoradiaCreated();
     } catch (error: any) {
       toast({
@@ -307,13 +354,59 @@ export const MoradiaForm: React.FC<MoradiaFormProps> = ({
                 onChange={handleInputChange}
               />
             </div>
+            <div className="grid gap-2">
+              <Label htmlFor="whatsapp">WhatsApp para Contato</Label>
+              <Input
+                id="whatsapp"
+                name="whatsapp"
+                placeholder="Ex: +5511999999999"
+                value={formData.whatsapp}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="imagens">Imagens</Label>
+              <div className="border border-input rounded-md p-2">
+                <Input
+                  id="imagens"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+                <label htmlFor="imagens" className="flex flex-col items-center gap-2 cursor-pointer">
+                  <Upload className="h-8 w-8 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">
+                    Clique para selecionar imagens
+                  </span>
+                </label>
+              </div>
+              {imageUrls.length > 0 && (
+                <div className="grid grid-cols-3 gap-2 mt-2">
+                  {imageUrls.map((url, index) => (
+                    <div key={index} className="relative aspect-square rounded-md overflow-hidden">
+                      <img 
+                        src={url} 
+                        alt={`Preview ${index + 1}`} 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading || universidadeLoading}>
-              {loading ? "Publicando..." : "Publicar Moradia"}
+            <Button 
+              type="submit" 
+              disabled={loading || universidadeLoading || uploadingImages}
+            >
+              {loading || uploadingImages ? "Publicando..." : "Publicar Moradia"}
             </Button>
           </DialogFooter>
         </form>

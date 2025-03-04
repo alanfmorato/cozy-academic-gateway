@@ -1,10 +1,11 @@
 
 import React from "react";
-import { MapPin, Users, Wifi, Info } from "lucide-react";
+import { MapPin, Users, Wifi, Phone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Moradia } from "@/types/moradia";
+import { toast } from "@/hooks/use-toast";
 
 interface MoradiaCardProps {
   moradia: Moradia;
@@ -24,6 +25,26 @@ export const MoradiaCard: React.FC<MoradiaCardProps> = ({
   expandedMoradia,
   toggleMoradiaExpansion,
 }) => {
+  const handleContactClick = () => {
+    if (!moradia.whatsapp) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Número de WhatsApp não disponível para este anúncio."
+      });
+      return;
+    }
+
+    // Format the WhatsApp number (remove non-numeric characters)
+    const formattedNumber = moradia.whatsapp.replace(/\D/g, "");
+    
+    // Create WhatsApp URL
+    const whatsappUrl = `https://wa.me/${formattedNumber}?text=Olá! Vi seu anúncio de moradia na plataforma e gostaria de mais informações.`;
+    
+    // Open WhatsApp in a new tab
+    window.open(whatsappUrl, "_blank");
+  };
+
   return (
     <Card className="border border-border/40 backdrop-blur-sm bg-card/30 overflow-hidden hover:shadow-md transition-all duration-200">
       <CardHeader className="pb-2">
@@ -88,10 +109,22 @@ export const MoradiaCard: React.FC<MoradiaCardProps> = ({
             <span>Inclui: {moradia.servicos}</span>
           </div>
         )}
+        
+        {moradia.imagens && moradia.imagens.length > 0 && (
+          <div className="pt-2">
+            <div className="aspect-video rounded-md overflow-hidden bg-muted">
+              <img 
+                src={moradia.imagens[0]} 
+                alt="Imagem da moradia" 
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </div>
+        )}
       </CardContent>
       <CardFooter>
-        <Button size="sm" className="w-full">
-          <Info className="mr-2 h-4 w-4" />
+        <Button size="sm" className="w-full" onClick={handleContactClick}>
+          <Phone className="mr-2 h-4 w-4" />
           Entrar em contato
         </Button>
       </CardFooter>

@@ -14,6 +14,7 @@ export interface Moradia {
     sigla: string;
   };
   updated_at: string;
+  whatsapp?: string;
 }
 
 export interface MoradiaFormData {
@@ -22,4 +23,6 @@ export interface MoradiaFormData {
   qtd_moradores: number;
   localizacao: string;
   servicos: string;
+  whatsapp: string;
 }
+
