@@ -1,10 +1,7 @@
-import React, { useState, useEffect } from "react";
+
+import React from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -13,13 +10,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useEventForm } from "./hooks/useEventForm";
+import EventFormFields from "./components/EventFormFields";
+import { tiposEvento } from "./utils/eventTypes";
 
 interface EventFormProps {
   open: boolean;
@@ -29,18 +22,8 @@ interface EventFormProps {
   onEventCreated: () => void;
 }
 
-// Define os tipos de evento exatamente como devem estar na base de dados
-// IMPORTANT: This array MUST match the constraint in the database exactly
-export const tiposEvento = [
-  "Festa",
-  "Palestra",
-  "Workshop",
-  "Seminário",
-  "Conferência",
-  "Encontro",
-  "Curso",
-  "Outro",
-];
+// Re-export tiposEvento for backward compatibility
+export { tiposEvento };
 
 const EventForm: React.FC<EventFormProps> = ({
   open,
@@ -49,268 +32,22 @@ const EventForm: React.FC<EventFormProps> = ({
   userUniversity,
   onEventCreated,
 }) => {
-  const [formData, setFormData] = useState({
-    titulo: "",
-    descricao: "",
-    data_hora: "",
-    localizacao: "",
-    tipo_evento: tiposEvento[0], // Define um valor válido inicial
-  });
-  const [formLoading, setFormLoading] = useState(false);
-  const [universidadeLoading, setUniversidadeLoading] = useState(false);
-  const [tiposEventoDb, setTiposEventoDb] = useState<string[]>([]);
-  const [constraintUpdated, setConstraintUpdated] = useState(false);
-
-  // Execute the edge function to fix event types constraint in the database
-  useEffect(() => {
-    const updateEventTypesConstraint = async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke('fixEventTypes');
-        
-        if (error) {
-          console.error('Error updating event types constraint:', error);
-          return;
-        }
-        
-        if (data?.success) {
-          console.log('Event types constraint updated successfully:', data.validEventTypes);
-          setConstraintUpdated(true);
-          toast({
-            title: "Sistema atualizado",
-            description: "Tipos de evento foram atualizados no sistema.",
-          });
-        }
-      } catch (error) {
-        console.error('Error calling fixEventTypes function:', error);
-      }
-    };
-
-    // Only run once when the form opens
-    if (open && !constraintUpdated) {
-      updateEventTypesConstraint();
-    }
-  }, [open, constraintUpdated]);
-
-  // Carregar os tipos de evento válidos do banco de dados
-  useEffect(() => {
-    const fetchAllowedEventTypes = async () => {
-      try {
-        // Teste com um evento que sabemos que funcionou
-        const { data, error } = await supabase
-          .from('eventos')
-          .select('tipo_evento')
-          .limit(5);
-        
-        if (error) {
-          console.error('Erro ao buscar tipos de evento:', error);
-          return;
-        }
-
-        if (data && data.length > 0) {
-          // Extrair tipos de evento únicos
-          const tipos = [...new Set(data.map(item => item.tipo_evento).filter(Boolean))];
-          if (tipos.length > 0) {
-            console.log('Tipos de evento encontrados no banco:', tipos);
-            setTiposEventoDb(tipos);
-          }
-        }
-      } catch (error) {
-        console.error('Erro ao buscar tipos de evento:', error);
-      }
-    };
-
-    fetchAllowedEventTypes();
-  }, []);
-
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleSelectChange = (value: string) => {
-    console.log(`Tipo de evento selecionado: "${value}"`);
-    
-    // Certifique-se de que é um valor permitido
-    if (tiposEvento.includes(value)) {
-      setFormData((prev) => ({
-        ...prev,
-        tipo_evento: value,
-      }));
-    } else {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: `Tipo de evento inválido: "${value}". Valores permitidos: ${tiposEvento.join(', ')}`,
-      });
-    }
-  };
-
-  const verificaECriaUniversidade = async (sigla: string) => {
-    if (universidadeLoading) return null;
-
-    setUniversidadeLoading(true);
-    try {
-      // Verifica se a universidade já existe
-      const { data: existingUni, error: checkError } = await supabase
-        .from("universidades")
-        .select("id")
-        .eq("sigla", sigla)
-        .maybeSingle();
-
-      if (checkError) {
-        console.error("Erro ao verificar universidade:", checkError);
-        return null;
-      }
-
-      // Se a universidade não existir, criamos uma nova
-      if (!existingUni) {
-        console.log(`Universidade com sigla ${sigla} não encontrada. Criando uma nova.`);
-
-        // Mapeamento das siglas para nomes completos
-        const uniNomes: Record<string, [string, string, string]> = {
-          usp: ["Universidade de São Paulo", "São Paulo", "SP"],
-          unicamp: ["Universidade Estadual de Campinas", "Campinas", "SP"],
-          ufrj: ["Universidade Federal do Rio de Janeiro", "Rio de Janeiro", "RJ"],
-          unb: ["Universidade de Brasília", "Brasília", "DF"],
-          ufmg: ["Universidade Federal de Minas Gerais", "Belo Horizonte", "MG"],
-          ufsc: ["Universidade Federal de Santa Catarina", "Florianópolis", "SC"],
-          ufrgs: ["Universidade Federal do Rio Grande do Sul", "Porto Alegre", "RS"],
-          ufc: ["Universidade Federal do Ceará", "Fortaleza", "CE"],
-          ufba: ["Universidade Federal da Bahia", "Salvador", "BA"],
-        };
-
-        if (!uniNomes[sigla]) {
-          console.error(`Não foi possível mapear a sigla ${sigla} para um nome de universidade`);
-          return null;
-        }
-
-        const [nome, cidade, estado] = uniNomes[sigla];
-
-        // Inserir a nova universidade
-        const { data: newUni, error: insertError } = await supabase
-          .from("universidades")
-          .insert({
-            nome,
-            sigla,
-            cidade,
-            estado,
-          })
-          .select("id")
-          .single();
-
-        if (insertError) {
-          console.error("Erro ao criar universidade:", insertError);
-          return null;
-        }
-
-        console.log(`Universidade ${nome} (${sigla}) criada com sucesso!`);
-        return newUni.id;
-      } else {
-        console.log(`Universidade com sigla ${sigla} encontrada.`);
-        return existingUni.id;
-      }
-    } catch (error) {
-      console.error("Erro ao verificar/criar universidade:", error);
-      return null;
-    } finally {
-      setUniversidadeLoading(false);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!userId) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Você precisa estar logado para publicar eventos.",
-      });
-      return;
-    }
-
-    if (!userUniversity) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Universidade não encontrada em seu perfil.",
-      });
-      return;
-    }
-
-    // Verificar se o tipo do evento está dentro das opções permitidas
-    if (!formData.tipo_evento || !tiposEvento.includes(formData.tipo_evento)) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: `Tipo de evento inválido: "${formData.tipo_evento}". Por favor, selecione um tipo válido.`,
-      });
-      return;
-    }
-
-    setFormLoading(true);
-    try {
-      // Verificar e criar a universidade se necessário antes de publicar o evento
-      const universidadeId = await verificaECriaUniversidade(userUniversity);
-
-      if (!universidadeId) {
-        throw new Error(
-          `Universidade ${userUniversity} não encontrada. Por favor, entre em contato com o suporte.`
-        );
-      }
-
-      // Criando o objeto do evento com um tipo válido garantido
-      const tipoEventoValido = formData.tipo_evento;
-      console.log(`Tipo de evento a ser enviado: "${tipoEventoValido}"`);
-
-      const novoEvento = {
-        titulo: formData.titulo,
-        descricao: formData.descricao,
-        data_hora: formData.data_hora,
-        localizacao: formData.localizacao,
-        tipo_evento: tipoEventoValido,
-        usuario_id: userId,
-        universidade_id: universidadeId,
-      };
-
-      console.log("Dados do evento a serem enviados:", novoEvento);
-
-      const { error } = await supabase.from("eventos").insert(novoEvento);
-
-      if (error) {
-        console.error("Erro ao inserir evento:", error);
-        throw new Error(`Erro ao inserir evento: ${error.message}`);
-      }
-
-      toast({
-        title: "Evento publicado",
-        description: "Seu evento foi publicado com sucesso!",
-      });
-
-      onOpenChange(false);
-      setFormData({
-        titulo: "",
-        descricao: "",
-        data_hora: "",
-        localizacao: "",
-        tipo_evento: tiposEvento[0], // Reset to a valid default
-      });
-      onEventCreated();
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao publicar evento",
-        description: error.message,
-      });
-    } finally {
-      setFormLoading(false);
-    }
-  };
+  const {
+    formData,
+    formLoading,
+    universidadeLoading,
+    tiposEventoDb,
+    handleInputChange,
+    handleSelectChange,
+    handleSubmit
+  } = useEventForm(
+    supabase,
+    userId,
+    userUniversity,
+    onOpenChange,
+    onEventCreated,
+    open
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -322,79 +59,14 @@ const EventForm: React.FC<EventFormProps> = ({
               Compartilhe detalhes sobre o evento que você deseja divulgar.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="titulo">Título</Label>
-              <Input
-                id="titulo"
-                name="titulo"
-                placeholder="Nome do evento"
-                value={formData.titulo}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="descricao">Descrição</Label>
-              <Textarea
-                id="descricao"
-                name="descricao"
-                placeholder="Descreva o evento, programação, etc."
-                value={formData.descricao}
-                onChange={handleInputChange}
-                required
-                className="resize-none"
-                rows={4}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="data_hora">Data e Hora</Label>
-                <Input
-                  id="data_hora"
-                  name="data_hora"
-                  type="datetime-local"
-                  value={formData.data_hora}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="tipo_evento">Tipo de Evento</Label>
-                <Select 
-                  value={formData.tipo_evento} 
-                  onValueChange={handleSelectChange}
-                  required
-                >
-                  <SelectTrigger id="tipo_evento">
-                    <SelectValue placeholder="Selecione o tipo..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tiposEvento.map((tipo) => (
-                      <SelectItem key={tipo} value={tipo}>
-                        {tipo}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {tiposEventoDb.length > 0 && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Tipos usados recentemente: {tiposEventoDb.join(', ')}
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="localizacao">Localização</Label>
-              <Input
-                id="localizacao"
-                name="localizacao"
-                placeholder="Local do evento"
-                value={formData.localizacao}
-                onChange={handleInputChange}
-              />
-            </div>
-          </div>
+          
+          <EventFormFields
+            formData={formData}
+            tiposEventoDb={tiposEventoDb}
+            handleInputChange={handleInputChange}
+            handleSelectChange={handleSelectChange}
+          />
+          
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
