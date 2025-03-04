@@ -27,6 +27,21 @@ const Index = () => {
     return null; // Será redirecionado pelo useEffect
   }
 
+  // Mapeamento de valores de universidade para nomes completos
+  const universidadeNomes: Record<string, string> = {
+    usp: "Universidade de São Paulo",
+    unicamp: "Universidade Estadual de Campinas",
+    ufrj: "Universidade Federal do Rio de Janeiro",
+    unb: "Universidade de Brasília",
+    ufmg: "Universidade Federal de Minas Gerais"
+  };
+
+  // Mapeamento de tipo de usuário para nomes mais amigáveis
+  const tiposUsuario: Record<string, string> = {
+    estudante: "Estudante",
+    cursinho: "Cursinho"
+  };
+
   return (
     <div className="container mx-auto p-8">
       <div className="w-full max-w-md mx-auto space-y-6">
@@ -45,9 +60,21 @@ const Index = () => {
               <span className="col-span-2">{user.email}</span>
             </div>
             <div className="grid grid-cols-3 gap-4">
+              <span className="font-medium">Nome:</span>
+              <span className="col-span-2">
+                {user.user_metadata.full_name || "Não informado"}
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
               <span className="font-medium">Universidade:</span>
               <span className="col-span-2">
-                {user.user_metadata.university || "Não informada"}
+                {universidadeNomes[user.user_metadata.university] || "Não informada"}
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <span className="font-medium">Tipo de usuário:</span>
+              <span className="col-span-2">
+                {tiposUsuario[user.user_metadata.tipo_usuario] || "Estudante"}
               </span>
             </div>
           </div>

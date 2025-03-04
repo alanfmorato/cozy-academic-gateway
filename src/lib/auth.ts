@@ -7,6 +7,7 @@ export interface AuthFormData {
   password: string;
   full_name?: string;
   university?: string;
+  tipo_usuario?: string;
 }
 
 export const signIn = async ({ email, password }: AuthFormData) => {
@@ -40,7 +41,7 @@ export const signIn = async ({ email, password }: AuthFormData) => {
   }
 };
 
-export const signUp = async ({ email, password, full_name, university }: AuthFormData) => {
+export const signUp = async ({ email, password, full_name, university, tipo_usuario }: AuthFormData) => {
   try {
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -49,6 +50,7 @@ export const signUp = async ({ email, password, full_name, university }: AuthFor
         data: {
           full_name,
           university,
+          tipo_usuario: tipo_usuario || "estudante",
         },
       },
     });
