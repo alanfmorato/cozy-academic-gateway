@@ -34,7 +34,84 @@ export const MoradiaForm: React.FC<MoradiaFormProps> = ({
 }) => {
   const [formData, setFormData] = useState<MoradiaFormData>(initialFormData);
   const [loading, setLoading] = useState(false);
+  const [universidadeLoading, setUniversidadeLoading] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Verifica e cria a universidade se necessário quando o componente for montado e o usuário estiver logado
+    if (user && user.user_metadata.university && user.user_metadata.university !== "explorando") {
+      verificaECriaUniversidade(user.user_metadata.university);
+    }
+  }, [user]);
+
+  const verificaECriaUniversidade = async (sigla: string) => {
+    if (universidadeLoading) return;
+    
+    setUniversidadeLoading(true);
+    try {
+      // Verifica se a universidade já existe
+      const { data: existingUni, error: checkError } = await supabase
+        .from("universidades")
+        .select("id")
+        .eq("sigla", sigla)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error("Erro ao verificar universidade:", checkError);
+        return;
+      }
+
+      // Se a universidade não existir, criamos uma nova
+      if (!existingUni) {
+        console.log(`Universidade com sigla ${sigla} não encontrada. Criando uma nova.`);
+        
+        // Mapeamento das siglas para nomes completos
+        const uniNomes: Record<string, [string, string, string]> = {
+          usp: ["Universidade de São Paulo", "São Paulo", "SP"],
+          unicamp: ["Universidade Estadual de Campinas", "Campinas", "SP"],
+          ufrj: ["Universidade Federal do Rio de Janeiro", "Rio de Janeiro", "RJ"],
+          unb: ["Universidade de Brasília", "Brasília", "DF"],
+          ufmg: ["Universidade Federal de Minas Gerais", "Belo Horizonte", "MG"],
+          ufsc: ["Universidade Federal de Santa Catarina", "Florianópolis", "SC"],
+          ufrgs: ["Universidade Federal do Rio Grande do Sul", "Porto Alegre", "RS"],
+          ufc: ["Universidade Federal do Ceará", "Fortaleza", "CE"],
+          ufba: ["Universidade Federal da Bahia", "Salvador", "BA"]
+        };
+
+        if (!uniNomes[sigla]) {
+          console.error(`Não foi possível mapear a sigla ${sigla} para um nome de universidade`);
+          return;
+        }
+
+        const [nome, cidade, estado] = uniNomes[sigla];
+        
+        // Inserir a nova universidade
+        const { data: newUni, error: insertError } = await supabase
+          .from("universidades")
+          .insert({
+            nome,
+            sigla,
+            cidade,
+            estado
+          })
+          .select("id")
+          .single();
+
+        if (insertError) {
+          console.error("Erro ao criar universidade:", insertError);
+          return;
+        }
+
+        console.log(`Universidade ${nome} (${sigla}) criada com sucesso!`);
+      } else {
+        console.log(`Universidade com sigla ${sigla} encontrada.`);
+      }
+    } catch (error) {
+      console.error("Erro ao verificar/criar universidade:", error);
+    } finally {
+      setUniversidadeLoading(false);
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -66,9 +143,12 @@ export const MoradiaForm: React.FC<MoradiaFormProps> = ({
       return;
     }
 
+    // Verificar e criar a universidade se necessário antes de publicar a moradia
+    await verificaECriaUniversidade(user.user_metadata.university);
+
     setLoading(true);
     try {
-      // Buscando o ID da universidade do usuário usando .eq() e .maybeSingle() em vez de .single()
+      // Buscando o ID da universidade do usuário
       const { data: uniData, error: uniError } = await supabase
         .from("universidades")
         .select("id")
@@ -232,7 +312,7 @@ export const MoradiaForm: React.FC<MoradiaFormProps> = ({
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || universidadeLoading}>
               {loading ? "Publicando..." : "Publicar Moradia"}
             </Button>
           </DialogFooter>
