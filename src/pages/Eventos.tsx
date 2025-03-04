@@ -14,6 +14,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue 
+} from "@/components/ui/select";
 
 interface Evento {
   id: string;
@@ -57,10 +64,84 @@ const Eventos = () => {
   });
   const [formLoading, setFormLoading] = useState(false);
   const [filtroTipo, setFiltroTipo] = useState<string>("");
+  const [universidadeLoading, setUniversidadeLoading] = useState(false);
 
   useEffect(() => {
     fetchEventos();
-  }, []);
+    // Verificar e criar universidade se necessário quando o usuário estiver logado
+    if (user && user.user_metadata.university && user.user_metadata.university !== "explorando") {
+      verificaECriaUniversidade(user.user_metadata.university);
+    }
+  }, [user]);
+
+  const verificaECriaUniversidade = async (sigla: string) => {
+    if (universidadeLoading) return;
+    
+    setUniversidadeLoading(true);
+    try {
+      // Verifica se a universidade já existe
+      const { data: existingUni, error: checkError } = await supabase
+        .from("universidades")
+        .select("id")
+        .eq("sigla", sigla)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error("Erro ao verificar universidade:", checkError);
+        return;
+      }
+
+      // Se a universidade não existir, criamos uma nova
+      if (!existingUni) {
+        console.log(`Universidade com sigla ${sigla} não encontrada. Criando uma nova.`);
+        
+        // Mapeamento das siglas para nomes completos
+        const uniNomes: Record<string, [string, string, string]> = {
+          usp: ["Universidade de São Paulo", "São Paulo", "SP"],
+          unicamp: ["Universidade Estadual de Campinas", "Campinas", "SP"],
+          ufrj: ["Universidade Federal do Rio de Janeiro", "Rio de Janeiro", "RJ"],
+          unb: ["Universidade de Brasília", "Brasília", "DF"],
+          ufmg: ["Universidade Federal de Minas Gerais", "Belo Horizonte", "MG"],
+          ufsc: ["Universidade Federal de Santa Catarina", "Florianópolis", "SC"],
+          ufrgs: ["Universidade Federal do Rio Grande do Sul", "Porto Alegre", "RS"],
+          ufc: ["Universidade Federal do Ceará", "Fortaleza", "CE"],
+          ufba: ["Universidade Federal da Bahia", "Salvador", "BA"]
+        };
+
+        if (!uniNomes[sigla]) {
+          console.error(`Não foi possível mapear a sigla ${sigla} para um nome de universidade`);
+          return;
+        }
+
+        const [nome, cidade, estado] = uniNomes[sigla];
+        
+        // Inserir a nova universidade
+        const { data: newUni, error: insertError } = await supabase
+          .from("universidades")
+          .insert({
+            nome,
+            sigla,
+            cidade,
+            estado
+          })
+          .select("id")
+          .single();
+
+        if (insertError) {
+          console.error("Erro ao criar universidade:", insertError);
+          return;
+        }
+
+        console.log(`Universidade ${nome} (${sigla}) criada com sucesso!`);
+      } else {
+        console.log(`Universidade com sigla ${sigla} encontrada.`);
+      }
+    } catch (error) {
+      console.error("Erro ao verificar/criar universidade:", error);
+    } finally {
+      setUniversidadeLoading(false);
+    }
+  };
 
   const fetchEventos = async () => {
     setLoading(true);
@@ -99,6 +180,13 @@ const Eventos = () => {
     }));
   };
 
+  const handleSelectChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      tipo_evento: value
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -111,6 +199,19 @@ const Eventos = () => {
       return;
     }
 
+    // Verificar se o tipo do evento está dentro das opções permitidas
+    if (formData.tipo_evento && !tiposEvento.includes(formData.tipo_evento)) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Tipo de evento inválido. Por favor, selecione um tipo válido.",
+      });
+      return;
+    }
+
+    // Verificar e criar a universidade se necessário antes de publicar o evento
+    await verificaECriaUniversidade(user.user_metadata.university);
+
     setFormLoading(true);
     try {
       // Buscando o ID da universidade do usuário
@@ -118,9 +219,15 @@ const Eventos = () => {
         .from("universidades")
         .select("id")
         .eq("sigla", user.user_metadata.university)
-        .single();
+        .maybeSingle();
 
-      if (uniError) throw uniError;
+      if (uniError) {
+        throw uniError;
+      }
+
+      if (!uniData) {
+        throw new Error(`Universidade ${user.user_metadata.university} não encontrada. Por favor, entre em contato com o suporte.`);
+      }
 
       const novoEvento = {
         ...formData,
@@ -238,18 +345,21 @@ const Eventos = () => {
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="tipo_evento">Tipo de Evento</Label>
-                    <select
-                      id="tipo_evento"
-                      name="tipo_evento"
-                      className="w-full px-3 py-2 bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-                      value={formData.tipo_evento}
-                      onChange={handleInputChange}
+                    <Select 
+                      value={formData.tipo_evento} 
+                      onValueChange={handleSelectChange}
                     >
-                      <option value="">Selecione...</option>
-                      {tiposEvento.map(tipo => (
-                        <option key={tipo} value={tipo}>{tipo}</option>
-                      ))}
-                    </select>
+                      <SelectTrigger id="tipo_evento">
+                        <SelectValue placeholder="Selecione..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {tiposEvento.map(tipo => (
+                          <SelectItem key={tipo} value={tipo}>
+                            {tipo}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <div className="grid gap-2">
@@ -267,7 +377,7 @@ const Eventos = () => {
                 <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={formLoading}>
+                <Button type="submit" disabled={formLoading || universidadeLoading}>
                   {formLoading ? "Publicando..." : "Publicar Evento"}
                 </Button>
               </DialogFooter>
@@ -287,16 +397,17 @@ const Eventos = () => {
           />
         </div>
         <div>
-          <select
-            className="w-full px-3 py-2 bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-            value={filtroTipo}
-            onChange={(e) => setFiltroTipo(e.target.value)}
-          >
-            <option value="">Todos os tipos</option>
-            {tiposEvento.map(tipo => (
-              <option key={tipo} value={tipo}>{tipo}</option>
-            ))}
-          </select>
+          <Select value={filtroTipo} onValueChange={setFiltroTipo}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Todos os tipos" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Todos os tipos</SelectItem>
+              {tiposEvento.map(tipo => (
+                <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
