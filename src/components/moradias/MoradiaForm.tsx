@@ -1,6 +1,6 @@
 
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Home, LogIn, Plus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +34,7 @@ export const MoradiaForm: React.FC<MoradiaFormProps> = ({
 }) => {
   const [formData, setFormData] = useState<MoradiaFormData>(initialFormData);
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -55,16 +56,33 @@ export const MoradiaForm: React.FC<MoradiaFormProps> = ({
       return;
     }
 
+    // Verificar se o usuário tem uma universidade associada
+    if (!user.user_metadata.university || user.user_metadata.university === "explorando") {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Você precisa estar associado a uma universidade para publicar moradias.",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
-      // Buscando o ID da universidade do usuário
+      // Buscando o ID da universidade do usuário usando .eq() e .maybeSingle() em vez de .single()
       const { data: uniData, error: uniError } = await supabase
         .from("universidades")
         .select("id")
         .eq("sigla", user.user_metadata.university)
-        .single();
+        .maybeSingle();
 
-      if (uniError) throw uniError;
+      if (uniError) {
+        console.error("Erro ao buscar universidade:", uniError);
+        throw uniError;
+      }
+
+      if (!uniData) {
+        throw new Error(`Universidade não encontrada com a sigla: ${user.user_metadata.university}`);
+      }
 
       const novaMoradia = {
         ...formData,
@@ -72,11 +90,16 @@ export const MoradiaForm: React.FC<MoradiaFormProps> = ({
         universidade_id: uniData.id,
       };
 
+      console.log("Tentando inserir moradia:", novaMoradia);
+
       const { error } = await supabase
         .from("moradias")
         .insert(novaMoradia);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro detalhado ao publicar moradia:", error);
+        throw error;
+      }
 
       toast({
         title: "Moradia publicada",
@@ -98,6 +121,11 @@ export const MoradiaForm: React.FC<MoradiaFormProps> = ({
     }
   };
 
+  const handleLoginRedirect = () => {
+    setOpen(false);
+    navigate("/auth");
+  };
+
   if (!user) {
     return (
       <Dialog open={open} onOpenChange={setOpen}>
@@ -114,10 +142,8 @@ export const MoradiaForm: React.FC<MoradiaFormProps> = ({
               Você precisa estar logado para publicar uma moradia. Crie uma conta ou faça login para continuar.
             </DialogDescription>
             <div className="flex justify-center pt-4">
-              <Button asChild>
-                <Link to="/auth" className="flex items-center">
-                  <LogIn className="mr-2 h-4 w-4" /> Entrar no sistema
-                </Link>
+              <Button onClick={handleLoginRedirect} className="flex items-center">
+                <LogIn className="mr-2 h-4 w-4" /> Entrar no sistema
               </Button>
             </div>
           </div>
