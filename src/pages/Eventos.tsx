@@ -108,11 +108,9 @@ const Eventos = () => {
 
       if (error) throw error;
       
-      // Filtra apenas eventos futuros
-      const now = new Date().toISOString();
-      const eventosFuturos = data.filter(evento => evento.data_hora >= now);
+      // Mostrar todos os eventos, sem filtrar por data
+      setEventos(data || []);
       
-      setEventos(eventosFuturos);
     } catch (error: any) {
       toast({
         variant: "destructive",

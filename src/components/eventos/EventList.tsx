@@ -34,7 +34,7 @@ const EventList: React.FC<EventListProps> = ({ eventos, loading, searchTerm, fil
       evento.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       evento.descricao.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (evento.localizacao && evento.localizacao.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      evento.universidade?.nome.toLowerCase().includes(searchTerm.toLowerCase());
+      (evento.universidade?.nome && evento.universidade.nome.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesTipo = filtroTipo === "all" ? true : evento.tipo_evento === filtroTipo;
 
@@ -73,6 +73,8 @@ const EventList: React.FC<EventListProps> = ({ eventos, loading, searchTerm, fil
       </div>
     );
   }
+
+  console.log("Displaying events:", filteredEventos);
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
