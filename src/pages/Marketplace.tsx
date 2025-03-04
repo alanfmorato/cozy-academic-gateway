@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { Search, ShoppingCart, Tag, Plus, Building } from "lucide-react";
+import { Search, ShoppingCart, Tag, Plus, Building, Info } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface Produto {
   id: string;
@@ -28,6 +29,76 @@ interface Produto {
   updated_at: string;
 }
 
+// Dados de demonstração para usar quando não houver produtos reais
+const produtosDemo: Produto[] = [
+  {
+    id: "demo1",
+    titulo: "Livro de Anatomia Humana - 8ª Edição",
+    descricao: "Livro em excelente estado, com marcações mínimas a lápis. Ideal para estudantes de Medicina e áreas da saúde.",
+    valor: 150,
+    imagens: null,
+    usuario_id: "demo",
+    universidade_id: "demo",
+    universidade: { nome: "Universidade de São Paulo", sigla: "USP" },
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: "demo2",
+    titulo: "Calculadora Científica HP Prime",
+    descricao: "Calculadora gráfica touchscreen, com menos de 1 ano de uso. Vem com capa protetora e cabo USB.",
+    valor: 580,
+    imagens: null,
+    usuario_id: "demo",
+    universidade_id: "demo",
+    universidade: { nome: "Universidade Estadual de Campinas", sigla: "UNICAMP" },
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: "demo3",
+    titulo: "Notebook Dell Inspiron 15",
+    descricao: "Processador i5, 8GB RAM, SSD 256GB. Ideal para estudantes de engenharia. Apenas 1 ano de uso.",
+    valor: 2200,
+    imagens: null,
+    usuario_id: "demo",
+    universidade_id: "demo",
+    universidade: { nome: "Universidade Federal de Santa Catarina", sigla: "UFSC" },
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: "demo4",
+    titulo: "Kit de Desenho Arquitetônico Completo",
+    descricao: "Kit com réguas, esquadros, compasso, lapiseiras e maletas. Usado por apenas um semestre.",
+    valor: 200,
+    imagens: null,
+    usuario_id: "demo",
+    universidade_id: "demo",
+    universidade: { nome: "Universidade de Brasília", sigla: "UnB" },
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: "demo5",
+    titulo: "Microscópio Binocular Profissional",
+    descricao: "Aumento de até 1600x, com kit de lâminas e luz LED. Usado em bom estado.",
+    valor: 850,
+    imagens: null,
+    usuario_id: "demo",
+    universidade_id: "demo",
+    universidade: { nome: "Universidade Federal do Rio Grande do Sul", sigla: "UFRGS" },
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: "demo6",
+    titulo: "Código Civil Comentado - 2023",
+    descricao: "Livro novo, ainda lacrado. Versão mais atualizada do Código Civil com jurisprudências.",
+    valor: 120,
+    imagens: null,
+    usuario_id: "demo",
+    universidade_id: "demo",
+    universidade: { nome: "Universidade Federal do Rio de Janeiro", sigla: "UFRJ" },
+    updated_at: new Date().toISOString()
+  }
+];
+
 const Marketplace = () => {
   const { user } = useAuth();
   const [produtos, setProdutos] = useState<Produto[]>([]);
@@ -40,6 +111,7 @@ const Marketplace = () => {
     valor: 0,
   });
   const [formLoading, setFormLoading] = useState(false);
+  const [usandoDadosDemo, setUsandoDadosDemo] = useState(false);
 
   useEffect(() => {
     fetchProdutos();
@@ -57,12 +129,25 @@ const Marketplace = () => {
         .order("updated_at", { ascending: false });
 
       if (error) throw error;
-      setProdutos(data);
+      
+      // Se não houver produtos ou se a lista estiver vazia, usar dados de demo
+      if (!data || data.length === 0) {
+        setProdutos(produtosDemo);
+        setUsandoDadosDemo(true);
+      } else {
+        setProdutos(data);
+        setUsandoDadosDemo(false);
+      }
     } catch (error: any) {
+      console.error("Erro ao carregar produtos:", error);
+      // Em caso de erro, mostrar produtos demo
+      setProdutos(produtosDemo);
+      setUsandoDadosDemo(true);
+      
       toast({
         variant: "destructive",
         title: "Erro ao carregar produtos",
-        description: error.message,
+        description: "Exibindo dados de demonstração.",
       });
     } finally {
       setLoading(false);
@@ -133,6 +218,30 @@ const Marketplace = () => {
     } finally {
       setFormLoading(false);
     }
+  };
+
+  const handleInteresse = (produto: Produto) => {
+    if (usandoDadosDemo) {
+      toast({
+        title: "Modo de demonstração",
+        description: "Esta é uma demonstração. Faça login para interagir com produtos reais.",
+      });
+      return;
+    }
+    
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Você precisa estar logado para demonstrar interesse.",
+      });
+      return;
+    }
+    
+    toast({
+      title: "Interesse registrado",
+      description: `Você demonstrou interesse em: ${produto.titulo}`,
+    });
   };
 
   const filteredProdutos = produtos.filter(produto =>
@@ -223,6 +332,16 @@ const Marketplace = () => {
         </Dialog>
       </div>
 
+      {usandoDadosDemo && (
+        <Alert className="mb-4 border-amber-500 bg-amber-500/10">
+          <Info className="h-4 w-4" />
+          <AlertTitle>Modo de demonstração</AlertTitle>
+          <AlertDescription>
+            Você está visualizando dados de demonstração. Faça login para publicar e interagir com produtos reais.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="relative">
         <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
         <Input
@@ -263,7 +382,7 @@ const Marketplace = () => {
           {filteredProdutos.map((produto) => (
             <Card 
               key={produto.id} 
-              className="border border-border/40 backdrop-blur-sm bg-card/30 overflow-hidden hover-scale"
+              className={`border border-border/40 backdrop-blur-sm bg-card/30 overflow-hidden hover:shadow-md transition-all ${usandoDadosDemo ? 'ring-1 ring-amber-500/30' : ''}`}
             >
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
@@ -279,7 +398,11 @@ const Marketplace = () => {
                 <p className="text-sm text-muted-foreground line-clamp-3">{produto.descricao}</p>
               </CardContent>
               <CardFooter className="pt-2">
-                <Button size="sm" className="w-full">
+                <Button 
+                  size="sm" 
+                  className="w-full"
+                  onClick={() => handleInteresse(produto)}
+                >
                   <Tag className="mr-2 h-4 w-4" />
                   Tenho interesse
                 </Button>
