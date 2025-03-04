@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 interface Estagio {
   id: string;
@@ -31,6 +31,7 @@ interface Estagio {
 
 const Estagios = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [estagios, setEstagios] = useState<Estagio[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -91,6 +92,11 @@ const Estagios = () => {
 
     setFormLoading(true);
     try {
+      // Verificando se o usuário tem uma universidade associada
+      if (!user.user_metadata.university || user.user_metadata.university === "explorando") {
+        throw new Error("Você precisa estar associado a uma universidade para publicar estágios.");
+      }
+
       // Buscando o ID da universidade do usuário
       const { data: uniData, error: uniError } = await supabase
         .from("universidades")
@@ -118,7 +124,7 @@ const Estagios = () => {
         .insert(novoEstagio);
 
       if (error) {
-        console.error("Erro ao publicar estágio:", error);
+        console.error("Erro detalhado ao publicar estágio:", error);
         throw error;
       }
 
@@ -147,6 +153,14 @@ const Estagios = () => {
     }
   };
 
+  const handleNewStageClick = () => {
+    if (!user) {
+      setNeedsLogin(true);
+    } else {
+      setFormOpen(true);
+    }
+  }
+
   const filteredEstagios = estagios.filter(estagio =>
     estagio.empresa.toLowerCase().includes(searchTerm.toLowerCase()) ||
     estagio.descricao.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -162,24 +176,9 @@ const Estagios = () => {
     });
   };
 
-  const renderAuthRequired = () => {
-    return (
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Autenticação necessária</DialogTitle>
-          <DialogDescription>
-            Você precisa estar logado para publicar uma vaga de estágio.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex justify-center py-4">
-          <Button asChild>
-            <Link to="/auth" className="flex items-center gap-2">
-              <LogIn className="h-4 w-4" /> Fazer login
-            </Link>
-          </Button>
-        </div>
-      </DialogContent>
-    );
+  const handleLoginRedirect = () => {
+    setNeedsLogin(false);
+    navigate("/auth");
   };
 
   return (
@@ -193,11 +192,26 @@ const Estagios = () => {
         </div>
         <Dialog open={needsLogin} onOpenChange={setNeedsLogin}>
           <DialogTrigger asChild>
-            <Button onClick={() => !user && setNeedsLogin(true)}>
+            <Button onClick={handleNewStageClick}>
               <Plus className="mr-2 h-4 w-4" /> Nova Vaga
             </Button>
           </DialogTrigger>
-          {!user ? renderAuthRequired() : (
+          {needsLogin && (
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Autenticação necessária</DialogTitle>
+                <DialogDescription>
+                  Você precisa estar logado para publicar uma vaga de estágio.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex justify-center py-4">
+                <Button onClick={handleLoginRedirect} className="flex items-center gap-2">
+                  <LogIn className="h-4 w-4" /> Fazer login
+                </Button>
+              </div>
+            </DialogContent>
+          )}
+          {user && formOpen && (
             <DialogContent className="sm:max-w-[550px]">
               <form onSubmit={handleSubmit}>
                 <DialogHeader>
