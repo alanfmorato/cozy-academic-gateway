@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { Search, Briefcase, Building, DollarSign, ListChecks, Plus } from "lucide-react";
+import { Search, Briefcase, Building, DollarSign, ListChecks, Plus, LogIn, AlertCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Link } from "react-router-dom";
 
 interface Estagio {
   id: string;
@@ -40,6 +42,7 @@ const Estagios = () => {
     requisitos: "",
   });
   const [formLoading, setFormLoading] = useState(false);
+  const [needsLogin, setNeedsLogin] = useState(false);
 
   useEffect(() => {
     fetchEstagios();
@@ -57,8 +60,9 @@ const Estagios = () => {
         .order("updated_at", { ascending: false });
 
       if (error) throw error;
-      setEstagios(data);
+      setEstagios(data || []);
     } catch (error: any) {
+      console.error("Erro ao carregar estágios:", error);
       toast({
         variant: "destructive",
         title: "Erro ao carregar estágios",
@@ -81,11 +85,7 @@ const Estagios = () => {
     e.preventDefault();
     
     if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Você precisa estar logado para publicar estágios.",
-      });
+      setNeedsLogin(true);
       return;
     }
 
@@ -98,7 +98,12 @@ const Estagios = () => {
         .eq("sigla", user.user_metadata.university)
         .single();
 
-      if (uniError) throw uniError;
+      if (uniError) {
+        if (uniError.code === 'PGRST116') {
+          throw new Error(`Universidade '${user.user_metadata.university}' não encontrada. Por favor, contate o administrador.`);
+        }
+        throw uniError;
+      }
 
       const novoEstagio = {
         empresa: formData.empresa,
@@ -112,7 +117,10 @@ const Estagios = () => {
         .from("estagios")
         .insert(novoEstagio);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao publicar estágio:", error);
+        throw error;
+      }
 
       toast({
         title: "Estágio publicado",
@@ -128,6 +136,7 @@ const Estagios = () => {
       });
       fetchEstagios();
     } catch (error: any) {
+      console.error("Erro detalhado:", error);
       toast({
         variant: "destructive",
         title: "Erro ao publicar estágio",
@@ -142,7 +151,7 @@ const Estagios = () => {
     estagio.empresa.toLowerCase().includes(searchTerm.toLowerCase()) ||
     estagio.descricao.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (estagio.requisitos && estagio.requisitos.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    estagio.universidade?.nome.toLowerCase().includes(searchTerm.toLowerCase())
+    (estagio.universidade?.nome && estagio.universidade.nome.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const formatCurrency = (value: number | null) => {
@@ -151,6 +160,26 @@ const Estagios = () => {
       style: 'currency',
       currency: 'BRL',
     });
+  };
+
+  const renderAuthRequired = () => {
+    return (
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Autenticação necessária</DialogTitle>
+          <DialogDescription>
+            Você precisa estar logado para publicar uma vaga de estágio.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex justify-center py-4">
+          <Button asChild>
+            <Link to="/auth" className="flex items-center gap-2">
+              <LogIn className="h-4 w-4" /> Fazer login
+            </Link>
+          </Button>
+        </div>
+      </DialogContent>
+    );
   };
 
   return (
@@ -162,83 +191,95 @@ const Estagios = () => {
             Encontre oportunidades de estágio e monitoria
           </p>
         </div>
-        <Dialog open={formOpen} onOpenChange={setFormOpen}>
+        <Dialog open={needsLogin} onOpenChange={setNeedsLogin}>
           <DialogTrigger asChild>
-            <Button>
+            <Button onClick={() => !user && setNeedsLogin(true)}>
               <Plus className="mr-2 h-4 w-4" /> Nova Vaga
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[550px]">
-            <form onSubmit={handleSubmit}>
-              <DialogHeader>
-                <DialogTitle>Publicar Vaga de Estágio</DialogTitle>
-                <DialogDescription>
-                  Compartilhe detalhes sobre a vaga de estágio disponível.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="empresa">Empresa</Label>
-                  <Input
-                    id="empresa"
-                    name="empresa"
-                    placeholder="Nome da empresa"
-                    value={formData.empresa}
-                    onChange={handleInputChange}
-                    required
-                  />
+          {!user ? renderAuthRequired() : (
+            <DialogContent className="sm:max-w-[550px]">
+              <form onSubmit={handleSubmit}>
+                <DialogHeader>
+                  <DialogTitle>Publicar Vaga de Estágio</DialogTitle>
+                  <DialogDescription>
+                    Compartilhe detalhes sobre a vaga de estágio disponível.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="empresa">Empresa</Label>
+                    <Input
+                      id="empresa"
+                      name="empresa"
+                      placeholder="Nome da empresa"
+                      value={formData.empresa}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="descricao">Descrição</Label>
+                    <Textarea
+                      id="descricao"
+                      name="descricao"
+                      placeholder="Descreva a vaga, responsabilidades, carga horária, etc."
+                      value={formData.descricao}
+                      onChange={handleInputChange}
+                      required
+                      className="resize-none"
+                      rows={4}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="remuneracao">Remuneração (R$)</Label>
+                    <Input
+                      id="remuneracao"
+                      name="remuneracao"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="Valor da bolsa (opcional)"
+                      value={formData.remuneracao}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="requisitos">Requisitos</Label>
+                    <Textarea
+                      id="requisitos"
+                      name="requisitos"
+                      placeholder="Requisitos para a vaga (opcional)"
+                      value={formData.requisitos}
+                      onChange={handleInputChange}
+                      className="resize-none"
+                      rows={3}
+                    />
+                  </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="descricao">Descrição</Label>
-                  <Textarea
-                    id="descricao"
-                    name="descricao"
-                    placeholder="Descreva a vaga, responsabilidades, carga horária, etc."
-                    value={formData.descricao}
-                    onChange={handleInputChange}
-                    required
-                    className="resize-none"
-                    rows={4}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="remuneracao">Remuneração (R$)</Label>
-                  <Input
-                    id="remuneracao"
-                    name="remuneracao"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="Valor da bolsa (opcional)"
-                    value={formData.remuneracao}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="requisitos">Requisitos</Label>
-                  <Textarea
-                    id="requisitos"
-                    name="requisitos"
-                    placeholder="Requisitos para a vaga (opcional)"
-                    value={formData.requisitos}
-                    onChange={handleInputChange}
-                    className="resize-none"
-                    rows={3}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={formLoading}>
-                  {formLoading ? "Publicando..." : "Publicar Vaga"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={formLoading}>
+                    {formLoading ? "Publicando..." : "Publicar Vaga"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          )}
         </Dialog>
       </div>
+
+      {!user && (
+        <Alert variant="default" className="mb-4 border-amber-200 bg-amber-50 text-amber-900">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Autenticação necessária</AlertTitle>
+          <AlertDescription>
+            Para publicar vagas de estágio, você precisa <Link to="/auth" className="font-medium underline">fazer login</Link> no sistema.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="relative">
         <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -272,7 +313,17 @@ const Estagios = () => {
           <Briefcase className="mx-auto h-12 w-12 text-muted-foreground opacity-50" />
           <h3 className="mt-4 text-lg font-medium">Nenhuma vaga encontrada</h3>
           <p className="mt-2 text-muted-foreground">
-            Seja o primeiro a publicar uma vaga ou ajuste sua busca.
+            {user ? (
+              <Button variant="link" className="p-0 h-auto" onClick={() => setFormOpen(true)}>
+                Seja o primeiro a publicar uma vaga
+              </Button>
+            ) : (
+              <>
+                <Link to="/auth" className="font-medium text-primary hover:underline">
+                  Faça login
+                </Link> para publicar uma vaga ou ajuste sua busca.
+              </>
+            )}
           </p>
         </div>
       ) : (
