@@ -15,6 +15,7 @@ export interface Moradia {
   };
   updated_at: string;
   whatsapp?: string;
+  status?: "disponivel" | "alugado";
 }
 
 export interface MoradiaFormData {
@@ -26,7 +27,8 @@ export interface MoradiaFormData {
   whatsapp: string;
 }
 
-// New interfaces for Marketplace and Materials
+// Agora vamos fazer o mesmo para Marketplace
+
 export interface Produto {
   id: string;
   titulo: string;
@@ -41,6 +43,7 @@ export interface Produto {
   };
   updated_at: string;
   whatsapp?: string;
+  status?: "disponivel" | "vendido";
 }
 
 export interface ProdutoFormData {
@@ -67,6 +70,7 @@ export interface Material {
   };
   updated_at: string;
   whatsapp?: string;
+  status?: "disponivel" | "indisponivel";
 }
 
 export interface MaterialFormData {

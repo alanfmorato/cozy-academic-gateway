@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { Search, ShoppingCart, Tag, Plus, Building, Info, Phone } from "lucide-react";
+import { Search, ShoppingCart, Tag, Plus, Building, Info, Phone, Edit, Trash, Check, Filter } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,8 +13,23 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Produto } from "@/types/moradia";
 
+interface Universidade {
+  id: string;
+  nome: string;
+  sigla: string;
+}
+
+// Manter os produtos de demonstração
 const produtosDemo: Produto[] = [
   {
     id: "demo1",
@@ -97,10 +113,52 @@ const Marketplace = () => {
   });
   const [formLoading, setFormLoading] = useState(false);
   const [usandoDadosDemo, setUsandoDadosDemo] = useState(false);
+  const [universidades, setUniversidades] = useState<Universidade[]>([]);
+  const [selectedUniversidade, setSelectedUniversidade] = useState<string>("");
+  const [editingProduto, setEditingProduto] = useState<Produto | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [soldDialogOpen, setSoldDialogOpen] = useState(false);
+  const [currentProduto, setCurrentProduto] = useState<Produto | null>(null);
 
   useEffect(() => {
     fetchProdutos();
+    fetchUniversidades();
   }, []);
+
+  useEffect(() => {
+    if (editingProduto) {
+      setIsEditing(true);
+      setFormData({
+        titulo: editingProduto.titulo,
+        descricao: editingProduto.descricao,
+        valor: editingProduto.valor,
+        whatsapp: editingProduto.whatsapp || "",
+      });
+    } else {
+      setIsEditing(false);
+      setFormData({
+        titulo: "",
+        descricao: "",
+        valor: 0,
+        whatsapp: "",
+      });
+    }
+  }, [editingProduto]);
+
+  const fetchUniversidades = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("universidades")
+        .select("id, nome, sigla")
+        .order("nome");
+
+      if (error) throw error;
+      setUniversidades(data);
+    } catch (error: any) {
+      console.error("Erro ao carregar universidades:", error);
+    }
+  };
 
   const fetchProdutos = async () => {
     setLoading(true);
@@ -167,24 +225,41 @@ const Marketplace = () => {
 
       if (uniError) throw uniError;
 
-      const novoProduto = {
-        ...formData,
-        usuario_id: user.id,
-        universidade_id: uniData.id,
-      };
+      if (isEditing && editingProduto) {
+        // Atualizando produto existente
+        const { error } = await supabase
+          .from("compra_venda")
+          .update(formData)
+          .eq("id", editingProduto.id);
 
-      const { error } = await supabase
-        .from("compra_venda")
-        .insert(novoProduto);
+        if (error) throw error;
 
-      if (error) throw error;
+        toast({
+          title: "Produto atualizado",
+          description: "Seu produto foi atualizado com sucesso!",
+        });
+      } else {
+        // Criando novo produto
+        const novoProduto = {
+          ...formData,
+          usuario_id: user.id,
+          universidade_id: uniData.id,
+        };
 
-      toast({
-        title: "Produto publicado",
-        description: "Seu produto foi publicado com sucesso!",
-      });
+        const { error } = await supabase
+          .from("compra_venda")
+          .insert(novoProduto);
+
+        if (error) throw error;
+
+        toast({
+          title: "Produto publicado",
+          description: "Seu produto foi publicado com sucesso!",
+        });
+      }
       
       setFormOpen(false);
+      setEditingProduto(null);
       setFormData({
         titulo: "",
         descricao: "",
@@ -195,12 +270,70 @@ const Marketplace = () => {
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Erro ao publicar produto",
+        title: isEditing ? "Erro ao atualizar produto" : "Erro ao publicar produto",
         description: error.message,
       });
     } finally {
       setFormLoading(false);
     }
+  };
+
+  const handleDelete = async () => {
+    if (!currentProduto) return;
+
+    try {
+      const { error } = await supabase
+        .from("compra_venda")
+        .delete()
+        .eq("id", currentProduto.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Produto excluído",
+        description: "Seu produto foi removido com sucesso.",
+      });
+      
+      fetchProdutos();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao excluir",
+        description: error.message,
+      });
+    }
+    
+    setDeleteDialogOpen(false);
+    setCurrentProduto(null);
+  };
+
+  const handleMarkAsSold = async () => {
+    if (!currentProduto) return;
+
+    try {
+      const { error } = await supabase
+        .from("compra_venda")
+        .update({ status: "vendido" })
+        .eq("id", currentProduto.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Produto atualizado",
+        description: "Produto marcado como vendido.",
+      });
+      
+      fetchProdutos();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao atualizar",
+        description: error.message,
+      });
+    }
+    
+    setSoldDialogOpen(false);
+    setCurrentProduto(null);
   };
 
   const handleInteresse = (produto: Produto) => {
@@ -228,11 +361,19 @@ const Marketplace = () => {
     window.open(whatsappUrl, "_blank");
   };
 
-  const filteredProdutos = produtos.filter(produto =>
-    produto.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    produto.descricao.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    produto.universidade?.nome.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProdutos = produtos.filter(produto => {
+    // Filtro de texto de busca
+    const matchesSearch = 
+      produto.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      produto.descricao.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      produto.universidade?.nome.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Filtro de universidade
+    const matchesUniversidade = 
+      !selectedUniversidade || produto.universidade_id === selectedUniversidade;
+    
+    return matchesSearch && matchesUniversidade;
+  });
 
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', {
@@ -250,7 +391,10 @@ const Marketplace = () => {
             Compre e venda itens na comunidade acadêmica
           </p>
         </div>
-        <Dialog open={formOpen} onOpenChange={setFormOpen}>
+        <Dialog open={formOpen} onOpenChange={(open) => {
+          setFormOpen(open);
+          if (!open) setEditingProduto(null);
+        }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" /> Novo Produto
@@ -259,9 +403,12 @@ const Marketplace = () => {
           <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
             <form onSubmit={handleSubmit}>
               <DialogHeader>
-                <DialogTitle>Publicar Novo Produto</DialogTitle>
+                <DialogTitle>{isEditing ? "Editar Produto" : "Publicar Novo Produto"}</DialogTitle>
                 <DialogDescription>
-                  Compartilhe detalhes sobre o item que você deseja vender.
+                  {isEditing 
+                    ? "Atualize as informações do seu produto."
+                    : "Compartilhe detalhes sobre o item que você deseja vender."
+                  }
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -318,11 +465,17 @@ const Marketplace = () => {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>
+                <Button type="button" variant="outline" onClick={() => {
+                  setFormOpen(false);
+                  setEditingProduto(null);
+                }}>
                   Cancelar
                 </Button>
                 <Button type="submit" disabled={formLoading}>
-                  {formLoading ? "Publicando..." : "Publicar Produto"}
+                  {formLoading 
+                    ? (isEditing ? "Atualizando..." : "Publicando...") 
+                    : (isEditing ? "Atualizar Produto" : "Publicar Produto")
+                  }
                 </Button>
               </DialogFooter>
             </form>
@@ -340,14 +493,37 @@ const Marketplace = () => {
         </Alert>
       )}
 
-      <div className="relative">
-        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar produtos..."
-          className="pl-10"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar produtos..."
+            className="pl-10"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="w-full sm:w-64">
+          <Select 
+            value={selectedUniversidade} 
+            onValueChange={setSelectedUniversidade}
+          >
+            <SelectTrigger>
+              <div className="flex items-center">
+                <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
+                <SelectValue placeholder="Universidade" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Todas as universidades</SelectItem>
+              {universidades.map((uni) => (
+                <SelectItem key={uni.id} value={uni.id}>
+                  {uni.sigla} - {uni.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {loading ? (
@@ -372,43 +548,136 @@ const Marketplace = () => {
           <ShoppingCart className="mx-auto h-12 w-12 text-muted-foreground opacity-50" />
           <h3 className="mt-4 text-lg font-medium">Nenhum produto encontrado</h3>
           <p className="mt-2 text-muted-foreground">
-            Seja o primeiro a publicar um produto ou ajuste sua busca.
+            {searchTerm || selectedUniversidade ? (
+              "Nenhum produto corresponde aos filtros aplicados. Tente outros termos ou filtros."
+            ) : (
+              "Seja o primeiro a publicar um produto ou ajuste sua busca."
+            )}
           </p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredProdutos.map((produto) => (
-            <Card 
-              key={produto.id} 
-              className={`border border-border/40 backdrop-blur-sm bg-card/30 overflow-hidden hover:shadow-md transition-all ${usandoDadosDemo ? 'ring-1 ring-amber-500/30' : ''}`}
-            >
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <h3 className="font-semibold">{produto.titulo}</h3>
-                  <Badge variant="outline">{formatCurrency(produto.valor)}</Badge>
-                </div>
-                <div className="flex items-center text-xs text-muted-foreground mt-1">
-                  <Building className="mr-1 h-3 w-3" />
-                  <span>{produto.universidade?.sigla || "UNIVERSIDADE"}</span>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground line-clamp-3">{produto.descricao}</p>
-              </CardContent>
-              <CardFooter className="pt-2">
-                <Button 
-                  size="sm" 
-                  className="w-full"
-                  onClick={() => handleInteresse(produto)}
-                >
-                  <Phone className="mr-2 h-4 w-4" />
-                  Entrar em contato
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
+          {filteredProdutos.map((produto) => {
+            const isOwner = user && user.id === produto.usuario_id && !usandoDadosDemo;
+            const statusBadge = produto.status === "vendido" ? (
+              <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 ml-1">
+                Vendido
+              </Badge>
+            ) : null;
+            
+            return (
+              <Card 
+                key={produto.id} 
+                className={`border border-border/40 backdrop-blur-sm bg-card/30 overflow-hidden hover:shadow-md transition-all ${usandoDadosDemo ? 'ring-1 ring-amber-500/30' : ''} ${produto.status === "vendido" ? "opacity-70" : ""}`}
+              >
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <h3 className="font-semibold">{produto.titulo}</h3>
+                    <div className="flex items-center">
+                      {statusBadge}
+                      <Badge variant="outline">{formatCurrency(produto.valor)}</Badge>
+                    </div>
+                  </div>
+                  <div className="flex items-center text-xs text-muted-foreground mt-1">
+                    <Building className="mr-1 h-3 w-3" />
+                    <span>{produto.universidade?.sigla || "UNIVERSIDADE"}</span>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground line-clamp-3">{produto.descricao}</p>
+                </CardContent>
+                <CardFooter className={isOwner ? "flex-col gap-2" : "pt-2"}>
+                  {isOwner ? (
+                    <>
+                      <div className="flex w-full gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex-1"
+                          onClick={() => {
+                            setEditingProduto(produto);
+                            setFormOpen(true);
+                          }}
+                        >
+                          <Edit className="mr-2 h-4 w-4" />
+                          Editar
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="destructive" 
+                          className="flex-1"
+                          onClick={() => {
+                            setCurrentProduto(produto);
+                            setDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash className="mr-2 h-4 w-4" />
+                          Excluir
+                        </Button>
+                      </div>
+                      {produto.status !== "vendido" && (
+                        <Button 
+                          size="sm" 
+                          variant="default" 
+                          className="w-full bg-green-600 hover:bg-green-700"
+                          onClick={() => {
+                            setCurrentProduto(produto);
+                            setSoldDialogOpen(true);
+                          }}
+                        >
+                          <Check className="mr-2 h-4 w-4" />
+                          Marcar como vendido
+                        </Button>
+                      )}
+                    </>
+                  ) : (
+                    <Button 
+                      size="sm" 
+                      className="w-full"
+                      onClick={() => handleInteresse(produto)}
+                      disabled={produto.status === "vendido"}
+                    >
+                      <Phone className="mr-2 h-4 w-4" />
+                      Entrar em contato
+                    </Button>
+                  )}
+                </CardFooter>
+              </Card>
+            );
+          })}
         </div>
       )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Isso excluirá permanentemente seu anúncio.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setCurrentProduto(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={soldDialogOpen} onOpenChange={setSoldDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Marcar como vendido?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isto marcará seu produto como vendido. O anúncio ainda ficará visível, 
+              mas indicado como indisponível.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setCurrentProduto(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleMarkAsSold}>Confirmar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

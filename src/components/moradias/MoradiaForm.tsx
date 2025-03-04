@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Home, LogIn, Plus, Upload } from "lucide-react";
@@ -8,13 +9,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { MoradiaFormData } from "@/types/moradia";
+import { Moradia, MoradiaFormData } from "@/types/moradia";
 
 interface MoradiaFormProps {
   user: any;
   onMoradiaCreated: () => void;
   open: boolean;
   setOpen: (open: boolean) => void;
+  editingMoradia?: Moradia | null;
+  onClearEdit?: () => void;
 }
 
 const initialFormData: MoradiaFormData = {
@@ -30,7 +33,9 @@ export const MoradiaForm: React.FC<MoradiaFormProps> = ({
   user, 
   onMoradiaCreated, 
   open, 
-  setOpen 
+  setOpen,
+  editingMoradia = null,
+  onClearEdit
 }) => {
   const [formData, setFormData] = useState<MoradiaFormData>(initialFormData);
   const [loading, setLoading] = useState(false);
@@ -38,6 +43,7 @@ export const MoradiaForm: React.FC<MoradiaFormProps> = ({
   const [selectedImages, setSelectedImages] = useState<FileList | null>(null);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [uploadingImages, setUploadingImages] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -45,6 +51,41 @@ export const MoradiaForm: React.FC<MoradiaFormProps> = ({
       verificaECriaUniversidade(user.user_metadata.university);
     }
   }, [user]);
+
+  // Efeito para carregar dados quando estiver editando
+  useEffect(() => {
+    if (editingMoradia) {
+      setIsEditing(true);
+      setFormData({
+        descricao: editingMoradia.descricao,
+        valor_mensal: editingMoradia.valor_mensal,
+        qtd_moradores: editingMoradia.qtd_moradores || 1,
+        localizacao: editingMoradia.localizacao || "",
+        servicos: editingMoradia.servicos || "",
+        whatsapp: editingMoradia.whatsapp || "",
+      });
+      
+      if (editingMoradia.imagens && editingMoradia.imagens.length > 0) {
+        setImageUrls(editingMoradia.imagens);
+      }
+    } else {
+      setIsEditing(false);
+      resetForm();
+    }
+  }, [editingMoradia]);
+
+  // Reset do formulário quando o dialog é fechado
+  useEffect(() => {
+    if (!open && onClearEdit) {
+      onClearEdit();
+    }
+  }, [open]);
+
+  const resetForm = () => {
+    setFormData(initialFormData);
+    setSelectedImages(null);
+    setImageUrls([]);
+  };
 
   const verificaECriaUniversidade = async (sigla: string) => {
     if (universidadeLoading) return;
@@ -206,43 +247,70 @@ export const MoradiaForm: React.FC<MoradiaFormProps> = ({
         throw new Error(`Universidade não encontrada com a sigla: ${user.user_metadata.university}`);
       }
 
-      const uploadedImageUrls = await uploadImages();
-
-      const novaMoradia = {
-        ...formData,
-        usuario_id: user.id,
-        universidade_id: uniData.id,
-        imagens: uploadedImageUrls.length > 0 ? uploadedImageUrls : null
-      };
-
-      console.log("Tentando inserir moradia:", novaMoradia);
-
-      const { error } = await supabase
-        .from("moradias")
-        .insert(novaMoradia);
-
-      if (error) {
-        console.error("Erro detalhado ao publicar moradia:", error);
-        throw error;
+      // Upload de novas imagens apenas se o usuário selecionar novas
+      let updatedImageUrls = imageUrls;
+      if (selectedImages && selectedImages.length > 0) {
+        const uploadedImageUrls = await uploadImages();
+        if (isEditing && editingMoradia?.imagens) {
+          // Se estiver editando, mantém as imagens existentes e adiciona as novas
+          updatedImageUrls = [...uploadedImageUrls];
+        } else {
+          updatedImageUrls = uploadedImageUrls;
+        }
       }
 
-      toast({
-        title: "Moradia publicada",
-        description: "Sua moradia foi publicada com sucesso!",
-      });
+      if (isEditing && editingMoradia) {
+        // Atualizando moradia existente
+        const { error } = await supabase
+          .from("moradias")
+          .update({
+            ...formData,
+            imagens: updatedImageUrls.length > 0 ? updatedImageUrls : null
+          })
+          .eq("id", editingMoradia.id);
+
+        if (error) {
+          throw error;
+        }
+
+        toast({
+          title: "Moradia atualizada",
+          description: "Sua moradia foi atualizada com sucesso!",
+        });
+      } else {
+        // Criando nova moradia
+        const novaMoradia = {
+          ...formData,
+          usuario_id: user.id,
+          universidade_id: uniData.id,
+          imagens: updatedImageUrls.length > 0 ? updatedImageUrls : null
+        };
+
+        const { error } = await supabase
+          .from("moradias")
+          .insert(novaMoradia);
+
+        if (error) {
+          throw error;
+        }
+
+        toast({
+          title: "Moradia publicada",
+          description: "Sua moradia foi publicada com sucesso!",
+        });
+      }
       
       setOpen(false);
-      setFormData(initialFormData);
-      setSelectedImages(null);
-      setImageUrls([]);
+      resetForm();
+      if (onClearEdit) onClearEdit();
       onMoradiaCreated();
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Erro ao publicar moradia",
+        title: isEditing ? "Erro ao atualizar moradia" : "Erro ao publicar moradia",
         description: error.message,
       });
-      console.error("Erro ao publicar moradia:", error);
+      console.error(isEditing ? "Erro ao atualizar moradia:" : "Erro ao publicar moradia:", error);
     } finally {
       setLoading(false);
     }
@@ -289,9 +357,12 @@ export const MoradiaForm: React.FC<MoradiaFormProps> = ({
       <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Publicar Nova Moradia</DialogTitle>
+            <DialogTitle>{isEditing ? "Editar Moradia" : "Publicar Nova Moradia"}</DialogTitle>
             <DialogDescription>
-              Compartilhe detalhes sobre a moradia que você deseja anunciar.
+              {isEditing 
+                ? "Atualize as informações da sua moradia."
+                : "Compartilhe detalhes sobre a moradia que você deseja anunciar."
+              }
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -366,7 +437,12 @@ export const MoradiaForm: React.FC<MoradiaFormProps> = ({
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="imagens">Imagens</Label>
+              <Label htmlFor="imagens">
+                {isEditing && imageUrls.length > 0 
+                  ? "Substituir imagens" 
+                  : "Imagens"
+                }
+              </Label>
               <div className="border border-input rounded-md p-2">
                 <Input
                   id="imagens"
@@ -379,7 +455,10 @@ export const MoradiaForm: React.FC<MoradiaFormProps> = ({
                 <label htmlFor="imagens" className="flex flex-col items-center gap-2 cursor-pointer">
                   <Upload className="h-8 w-8 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">
-                    Clique para selecionar imagens
+                    {isEditing && imageUrls.length > 0 
+                      ? "Clique para substituir imagens" 
+                      : "Clique para selecionar imagens"
+                    }
                   </span>
                 </label>
               </div>
@@ -399,14 +478,20 @@ export const MoradiaForm: React.FC<MoradiaFormProps> = ({
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => {
+              setOpen(false);
+              if (onClearEdit) onClearEdit();
+            }}>
               Cancelar
             </Button>
             <Button 
               type="submit" 
               disabled={loading || universidadeLoading || uploadingImages}
             >
-              {loading || uploadingImages ? "Publicando..." : "Publicar Moradia"}
+              {loading || uploadingImages 
+                ? (isEditing ? "Atualizando..." : "Publicando...") 
+                : (isEditing ? "Atualizar Moradia" : "Publicar Moradia")
+              }
             </Button>
           </DialogFooter>
         </form>

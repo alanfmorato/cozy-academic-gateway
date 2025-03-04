@@ -10,24 +10,38 @@ interface MoradiasListProps {
   moradias: Moradia[];
   loading: boolean;
   searchTerm: string;
+  universidadeFilter?: string;
   expandedMoradia: string | null;
   toggleMoradiaExpansion: (id: string) => void;
   onOpenForm: () => void;
+  onEditMoradia?: (moradia: Moradia) => void;
+  onRefresh?: () => void;
 }
 
 export const MoradiasList: React.FC<MoradiasListProps> = ({
   moradias,
   loading,
   searchTerm,
+  universidadeFilter = "",
   expandedMoradia,
   toggleMoradiaExpansion,
   onOpenForm,
+  onEditMoradia,
+  onRefresh,
 }) => {
-  const filteredMoradias = moradias.filter(moradia =>
-    moradia.descricao.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    moradia.localizacao?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    moradia.universidade?.nome.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredMoradias = moradias.filter(moradia => {
+    // Filtro de texto de busca
+    const matchesSearch = 
+      moradia.descricao.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      moradia.localizacao?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      moradia.universidade?.nome.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Filtro de universidade
+    const matchesUniversidade = 
+      !universidadeFilter || moradia.universidade_id === universidadeFilter;
+    
+    return matchesSearch && matchesUniversidade;
+  });
 
   if (loading) {
     return (
@@ -45,8 +59,8 @@ export const MoradiasList: React.FC<MoradiasListProps> = ({
         <Home className="mx-auto h-12 w-12 text-muted-foreground opacity-50" />
         <h3 className="mt-4 text-lg font-medium">Nenhuma moradia encontrada</h3>
         <p className="mt-2 text-muted-foreground">
-          {searchTerm ? (
-            "Nenhuma moradia corresponde aos termos de busca. Tente outros termos."
+          {searchTerm || universidadeFilter ? (
+            "Nenhuma moradia corresponde aos filtros aplicados. Tente outros termos ou filtros."
           ) : (
             <>
               Ainda não temos moradias cadastradas. Seja o primeiro a <Button variant="link" className="p-0 h-auto" onClick={onOpenForm}>publicar uma moradia</Button>.
@@ -65,6 +79,8 @@ export const MoradiasList: React.FC<MoradiasListProps> = ({
           moradia={moradia}
           expandedMoradia={expandedMoradia}
           toggleMoradiaExpansion={toggleMoradiaExpansion}
+          onEdit={onEditMoradia}
+          onRefresh={onRefresh}
         />
       ))}
     </div>
