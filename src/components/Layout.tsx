@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -54,21 +53,30 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [sessionChecked, setSessionChecked] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   
-  // Verificar a sessão ao montar o componente ou ao mudar de página
   useEffect(() => {
     const verifySession = async () => {
-      await checkSession();
-      setSessionChecked(true);
+      try {
+        setCheckingSession(true);
+        const session = await checkSession();
+        
+        if (!session) {
+          console.log("No session found, redirecting to auth");
+          navigate('/auth');
+        }
+      } catch (error) {
+        console.error("Error verifying session:", error);
+        navigate('/auth');
+      } finally {
+        setCheckingSession(false);
+      }
     };
     
     verifySession();
-  }, [checkSession, location.pathname]);
+  }, [checkSession, navigate]);
   
-  // Ensure menu is properly initialized in new tabs
   useEffect(() => {
-    // We need to handle the initial state properly for new tabs
     const handleResize = () => {
       if (window.innerWidth >= 768) {
         setMenuOpen(true);
@@ -77,23 +85,34 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       }
     };
     
-    // Set initial state
     handleResize();
     
-    // Add event listener for window resize
     window.addEventListener('resize', handleResize);
     
-    // Clean up the event listener on component unmount
     return () => {
       window.removeEventListener('resize', handleResize);
     };
   }, []);
 
-  // Mostrar um estado de carregamento enquanto verificamos a autenticação
-  if (isLoading || !sessionChecked) {
+  useEffect(() => {
+    let timeoutId: number;
+    
+    if (isLoading || checkingSession) {
+      timeoutId = window.setTimeout(() => {
+        setCheckingSession(false);
+      }, 5000);
+    }
+    
+    return () => {
+      if (timeoutId) window.clearTimeout(timeoutId);
+    };
+  }, [isLoading, checkingSession]);
+
+  if (isLoading || checkingSession) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-xl">Carregando...</div>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+        <div className="animate-pulse text-xl mb-4">Carregando...</div>
+        <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -111,8 +130,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   const handleLogout = async () => {
-    await signOut();
-    navigate('/auth');
+    try {
+      await signOut();
+      navigate('/auth');
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao fazer logout",
+        description: "Tente novamente mais tarde",
+      });
+    }
   };
 
   const routes = [
@@ -127,7 +155,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="flex min-h-screen bg-background w-full">
-      {/* Mobile menu button */}
       <button
         className="fixed top-4 left-4 z-50 p-2 rounded-full bg-background border border-border md:hidden"
         onClick={toggleMenu}
@@ -135,7 +162,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         {menuOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
 
-      {/* Sidebar */}
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-40 w-64 bg-card border-r border-border transition-transform duration-300 ease-in-out transform glass-morphism md:translate-x-0",
@@ -190,7 +216,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
       </aside>
 
-      {/* Main content */}
       <main
         className={cn(
           "flex-1 transition-all duration-300 ml-0 md:ml-64 p-6",

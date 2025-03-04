@@ -81,9 +81,10 @@ export const signUp = async ({ email, password, full_name, university, tipo_usua
 
 export const signOut = async () => {
   try {
+    console.log("Attempting to sign out");
     const { error } = await supabase.auth.signOut();
     if (error) {
-      console.error("Erro ao fazer logout:", error);
+      console.error("Error signing out:", error);
       toast({
         variant: "destructive",
         title: "Erro ao sair",
@@ -92,13 +93,14 @@ export const signOut = async () => {
       return { success: false, error };
     }
     
+    console.log("Sign out successful");
     toast({
       title: "Sessão finalizada",
       description: "Você saiu da sua conta com sucesso",
     });
     return { success: true };
   } catch (error: any) {
-    console.error("Exceção ao fazer logout:", error);
+    console.error("Exception when signing out:", error);
     toast({
       variant: "destructive",
       title: "Erro inesperado",
