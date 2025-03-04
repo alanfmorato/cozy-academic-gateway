@@ -286,7 +286,7 @@ export const MoradiaForm: React.FC<MoradiaFormProps> = ({
           <Plus className="mr-2 h-4 w-4" /> Nova Moradia
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[550px]">
+      <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Publicar Nova Moradia</DialogTitle>
