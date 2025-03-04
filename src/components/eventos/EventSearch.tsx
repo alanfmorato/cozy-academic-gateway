@@ -41,7 +41,7 @@ const EventSearch: React.FC<EventSearchProps> = ({
             <SelectValue placeholder="Todos os tipos" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todos os tipos</SelectItem>
+            <SelectItem value="all">Todos os tipos</SelectItem>
             {tiposEvento.map((tipo) => (
               <SelectItem key={tipo} value={tipo}>
                 {tipo}

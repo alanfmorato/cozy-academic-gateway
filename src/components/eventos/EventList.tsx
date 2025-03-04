@@ -36,7 +36,7 @@ const EventList: React.FC<EventListProps> = ({ eventos, loading, searchTerm, fil
       (evento.localizacao && evento.localizacao.toLowerCase().includes(searchTerm.toLowerCase())) ||
       evento.universidade?.nome.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesTipo = filtroTipo ? evento.tipo_evento === filtroTipo : true;
+    const matchesTipo = filtroTipo === "all" ? true : evento.tipo_evento === filtroTipo;
 
     return matchesTermo && matchesTipo;
   });

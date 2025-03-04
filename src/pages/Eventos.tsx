@@ -15,7 +15,7 @@ const Eventos = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [formOpen, setFormOpen] = useState(false);
-  const [filtroTipo, setFiltroTipo] = useState<string>("");
+  const [filtroTipo, setFiltroTipo] = useState<string>("all");
   const [universidadeLoading, setUniversidadeLoading] = useState(false);
 
   useEffect(() => {
