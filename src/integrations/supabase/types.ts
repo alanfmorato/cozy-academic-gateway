@@ -53,6 +53,7 @@ export type Database = {
           descricao: string
           id: string
           imagens: string[] | null
+          status: string | null
           titulo: string
           universidade_id: string
           updated_at: string
@@ -65,6 +66,7 @@ export type Database = {
           descricao: string
           id?: string
           imagens?: string[] | null
+          status?: string | null
           titulo: string
           universidade_id: string
           updated_at?: string
@@ -77,6 +79,7 @@ export type Database = {
           descricao?: string
           id?: string
           imagens?: string[] | null
+          status?: string | null
           titulo?: string
           universidade_id?: string
           updated_at?: string
@@ -227,6 +230,7 @@ export type Database = {
           curso_id: string | null
           descricao: string | null
           id: string
+          status: string | null
           titulo: string
           universidade_id: string
           updated_at: string
@@ -239,6 +243,7 @@ export type Database = {
           curso_id?: string | null
           descricao?: string | null
           id?: string
+          status?: string | null
           titulo: string
           universidade_id: string
           updated_at?: string
@@ -251,6 +256,7 @@ export type Database = {
           curso_id?: string | null
           descricao?: string | null
           id?: string
+          status?: string | null
           titulo?: string
           universidade_id?: string
           updated_at?: string
@@ -283,6 +289,7 @@ export type Database = {
           localizacao: string | null
           qtd_moradores: number | null
           servicos: string | null
+          status: string | null
           universidade_id: string
           updated_at: string
           usuario_id: string
@@ -297,6 +304,7 @@ export type Database = {
           localizacao?: string | null
           qtd_moradores?: number | null
           servicos?: string | null
+          status?: string | null
           universidade_id: string
           updated_at?: string
           usuario_id: string
@@ -311,6 +319,7 @@ export type Database = {
           localizacao?: string | null
           qtd_moradores?: number | null
           servicos?: string | null
+          status?: string | null
           universidade_id?: string
           updated_at?: string
           usuario_id?: string

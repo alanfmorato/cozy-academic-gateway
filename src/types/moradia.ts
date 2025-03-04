@@ -27,7 +27,7 @@ export interface MoradiaFormData {
   whatsapp: string;
 }
 
-// Agora vamos fazer o mesmo para Marketplace
+// Tipos para Marketplace
 
 export interface Produto {
   id: string;
