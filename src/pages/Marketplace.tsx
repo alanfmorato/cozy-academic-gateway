@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -29,7 +28,6 @@ interface Universidade {
   sigla: string;
 }
 
-// Manter os produtos de demonstração
 const produtosDemo: Produto[] = [
   {
     id: "demo1",
@@ -226,7 +224,6 @@ const Marketplace = () => {
       if (uniError) throw uniError;
 
       if (isEditing && editingProduto) {
-        // Atualizando produto existente
         const { error } = await supabase
           .from("compra_venda")
           .update(formData)
@@ -239,7 +236,6 @@ const Marketplace = () => {
           description: "Seu produto foi atualizado com sucesso!",
         });
       } else {
-        // Criando novo produto
         const novoProduto = {
           ...formData,
           usuario_id: user.id,
@@ -362,13 +358,11 @@ const Marketplace = () => {
   };
 
   const filteredProdutos = produtos.filter(produto => {
-    // Filtro de texto de busca
     const matchesSearch = 
       produto.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       produto.descricao.toLowerCase().includes(searchTerm.toLowerCase()) ||
       produto.universidade?.nome.toLowerCase().includes(searchTerm.toLowerCase());
     
-    // Filtro de universidade
     const matchesUniversidade = 
       !selectedUniversidade || produto.universidade_id === selectedUniversidade;
     
@@ -515,7 +509,7 @@ const Marketplace = () => {
               </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todas as universidades</SelectItem>
+              <SelectItem value="all">Todas as universidades</SelectItem>
               {universidades.map((uni) => (
                 <SelectItem key={uni.id} value={uni.id}>
                   {uni.sigla} - {uni.nome}

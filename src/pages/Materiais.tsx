@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -145,7 +144,6 @@ const Materiais = () => {
       if (uniError) throw uniError;
 
       if (isEditing && editingMaterial) {
-        // Atualizando material existente
         const { error } = await supabase
           .from("materiais")
           .update({
@@ -161,7 +159,6 @@ const Materiais = () => {
           description: "Seu material foi atualizado com sucesso!",
         });
       } else {
-        // Criando novo material
         const novoMaterial = {
           ...formData,
           usuario_id: user.id,
@@ -278,17 +275,14 @@ const Materiais = () => {
   };
 
   const filteredMateriais = materiais.filter(material => {
-    // Filtro de texto de busca
     const matchesTermo = 
       material.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (material.descricao && material.descricao.toLowerCase().includes(searchTerm.toLowerCase())) ||
       material.universidade?.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (material.curso?.nome && material.curso.nome.toLowerCase().includes(searchTerm.toLowerCase()));
     
-    // Filtro de curso
     const matchesCurso = !filtroCurso || material.curso_id === filtroCurso;
     
-    // Filtro de universidade
     const matchesUniversidade = !filtroUniversidade || material.universidade_id === filtroUniversidade;
     
     return matchesTermo && matchesCurso && matchesUniversidade;
@@ -356,7 +350,7 @@ const Materiais = () => {
                     value={formData.curso_id}
                     onChange={handleInputChange}
                   >
-                    <option value="">Selecione um curso...</option>
+                    <option value="all">Selecione um curso...</option>
                     {cursos.map(curso => (
                       <option key={curso.id} value={curso.id}>{curso.nome}</option>
                     ))}
@@ -431,7 +425,7 @@ const Materiais = () => {
               </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos os cursos</SelectItem>
+              <SelectItem value="all">Todos os cursos</SelectItem>
               {cursos.map(curso => (
                 <SelectItem key={curso.id} value={curso.id}>{curso.nome}</SelectItem>
               ))}
@@ -450,7 +444,7 @@ const Materiais = () => {
               </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todas as universidades</SelectItem>
+              <SelectItem value="all">Todas as universidades</SelectItem>
               {universidades.map((uni) => (
                 <SelectItem key={uni.id} value={uni.id}>
                   {uni.sigla} - {uni.nome}
