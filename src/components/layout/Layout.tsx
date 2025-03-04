@@ -1,11 +1,12 @@
 
-import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import Sidebar from "./Sidebar";
 import LoadingScreen from "./LoadingScreen";
+import { toast } from "@/hooks/use-toast";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -16,11 +17,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
+  const sessionVerified = useRef(false);
   
   useEffect(() => {
+    // Only verify session once on component mount
     const verifySession = async () => {
+      if (sessionVerified.current) return;
+      
       try {
         setCheckingSession(true);
+        sessionVerified.current = true;
         const session = await checkSession();
         
         if (!session) {
@@ -29,6 +35,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         }
       } catch (error) {
         console.error("Error verifying session:", error);
+        toast({
+          variant: "destructive",
+          title: "Erro de autenticação",
+          description: "Falha ao verificar sua sessão. Tente novamente."
+        });
         navigate('/auth');
       } finally {
         setCheckingSession(false);

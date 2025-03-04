@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -26,12 +26,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [initialized, setInitialized] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const sessionCheckRef = useRef<boolean>(false);
 
-  // Function to check the current session
-  const checkSession = async () => {
+  // Memoized function to check the current session
+  const checkSession = useCallback(async () => {
+    // If a session check is already in progress, don't start another one
+    if (sessionCheckRef.current) {
+      return session;
+    }
+
     try {
+      sessionCheckRef.current = true;
       setIsLoading(true);
       console.log("Checking session...");
+      
       const { data, error } = await supabase.auth.getSession();
       
       if (error) {
@@ -55,8 +63,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
       setInitialized(true);
+      sessionCheckRef.current = false;
     }
-  };
+  }, [session]);
 
   // Redirect logic based on auth state and current location
   useEffect(() => {
@@ -68,10 +77,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [session, location.pathname, initialized, navigate]);
 
-  // Check session and setup auth listener on component mount
+  // Check session and setup auth listener only once on component mount
   useEffect(() => {
     const initAuth = async () => {
-      await checkSession();
+      if (!initialized) {
+        await checkSession();
+      }
       
       // Setup listener for auth state changes
       const { data: authListener } = supabase.auth.onAuthStateChange(
@@ -97,7 +108,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     
     initAuth();
-  }, [navigate, location.pathname]);
+    // Only run once on mount, other state changes are handled by the onAuthStateChange listener
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, session, isLoading, checkSession }}>
