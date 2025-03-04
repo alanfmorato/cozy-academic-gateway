@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { Search, Home, MapPin, Users, Wifi, Plus, Info } from "lucide-react";
+import { Search, Home, MapPin, Users, Wifi, Plus, Info, LogIn } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Link } from "react-router-dom";
 
 interface Moradia {
   id: string;
@@ -69,6 +69,7 @@ const Moradias = () => {
         title: "Erro ao carregar moradias",
         description: error.message,
       });
+      console.error("Erro ao carregar moradias:", error);
     } finally {
       setLoading(false);
     }
@@ -137,6 +138,7 @@ const Moradias = () => {
         title: "Erro ao publicar moradia",
         description: error.message,
       });
+      console.error("Erro ao publicar moradia:", error);
     } finally {
       setFormLoading(false);
     }
@@ -175,83 +177,100 @@ const Moradias = () => {
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[550px]">
-            <form onSubmit={handleSubmit}>
-              <DialogHeader>
-                <DialogTitle>Publicar Nova Moradia</DialogTitle>
-                <DialogDescription>
-                  Compartilhe detalhes sobre a moradia que você deseja anunciar.
+            {!user ? (
+              <div className="text-center py-6 space-y-4">
+                <Home className="mx-auto h-12 w-12 text-muted-foreground opacity-50" />
+                <DialogTitle>Faça login para continuar</DialogTitle>
+                <DialogDescription className="px-8">
+                  Você precisa estar logado para publicar uma moradia. Crie uma conta ou faça login para continuar.
                 </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="descricao">Descrição</Label>
-                  <Textarea
-                    id="descricao"
-                    name="descricao"
-                    placeholder="Descreva a moradia, tipo de imóvel, etc."
-                    value={formData.descricao}
-                    onChange={handleInputChange}
-                    required
-                    className="resize-none"
-                    rows={4}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="valor_mensal">Valor Mensal (R$)</Label>
-                    <Input
-                      id="valor_mensal"
-                      name="valor_mensal"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.valor_mensal}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="qtd_moradores">Quantidade de Moradores</Label>
-                    <Input
-                      id="qtd_moradores"
-                      name="qtd_moradores"
-                      type="number"
-                      min="1"
-                      value={formData.qtd_moradores}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="localizacao">Localização</Label>
-                  <Input
-                    id="localizacao"
-                    name="localizacao"
-                    placeholder="Endereço ou bairro"
-                    value={formData.localizacao}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="servicos">Serviços Inclusos</Label>
-                  <Input
-                    id="servicos"
-                    name="servicos"
-                    placeholder="Internet, água, luz, faxina, etc."
-                    value={formData.servicos}
-                    onChange={handleInputChange}
-                  />
+                <div className="flex justify-center pt-4">
+                  <Button asChild>
+                    <Link to="/auth" className="flex items-center">
+                      <LogIn className="mr-2 h-4 w-4" /> Entrar no sistema
+                    </Link>
+                  </Button>
                 </div>
               </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={formLoading}>
-                  {formLoading ? "Publicando..." : "Publicar Moradia"}
-                </Button>
-              </DialogFooter>
-            </form>
+            ) : (
+              <form onSubmit={handleSubmit}>
+                <DialogHeader>
+                  <DialogTitle>Publicar Nova Moradia</DialogTitle>
+                  <DialogDescription>
+                    Compartilhe detalhes sobre a moradia que você deseja anunciar.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="descricao">Descrição</Label>
+                    <Textarea
+                      id="descricao"
+                      name="descricao"
+                      placeholder="Descreva a moradia, tipo de imóvel, etc."
+                      value={formData.descricao}
+                      onChange={handleInputChange}
+                      required
+                      className="resize-none"
+                      rows={4}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="valor_mensal">Valor Mensal (R$)</Label>
+                      <Input
+                        id="valor_mensal"
+                        name="valor_mensal"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formData.valor_mensal}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="qtd_moradores">Quantidade de Moradores</Label>
+                      <Input
+                        id="qtd_moradores"
+                        name="qtd_moradores"
+                        type="number"
+                        min="1"
+                        value={formData.qtd_moradores}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="localizacao">Localização</Label>
+                    <Input
+                      id="localizacao"
+                      name="localizacao"
+                      placeholder="Endereço ou bairro"
+                      value={formData.localizacao}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="servicos">Serviços Inclusos</Label>
+                    <Input
+                      id="servicos"
+                      name="servicos"
+                      placeholder="Internet, água, luz, faxina, etc."
+                      value={formData.servicos}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={formLoading}>
+                    {formLoading ? "Publicando..." : "Publicar Moradia"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            )}
           </DialogContent>
         </Dialog>
       </div>
@@ -288,7 +307,13 @@ const Moradias = () => {
           <Home className="mx-auto h-12 w-12 text-muted-foreground opacity-50" />
           <h3 className="mt-4 text-lg font-medium">Nenhuma moradia encontrada</h3>
           <p className="mt-2 text-muted-foreground">
-            Seja o primeiro a publicar uma moradia ou ajuste sua busca.
+            {searchTerm ? (
+              "Nenhuma moradia corresponde aos termos de busca. Tente outros termos."
+            ) : (
+              <>
+                Ainda não temos moradias cadastradas. Seja o primeiro a <Button variant="link" className="p-0 h-auto" onClick={() => setFormOpen(true)}>publicar uma moradia</Button>.
+              </>
+            )}
           </p>
         </div>
       ) : (
@@ -296,7 +321,7 @@ const Moradias = () => {
           {filteredMoradias.map((moradia) => (
             <Card 
               key={moradia.id} 
-              className="border border-border/40 backdrop-blur-sm bg-card/30 overflow-hidden hover-scale"
+              className="border border-border/40 backdrop-blur-sm bg-card/30 overflow-hidden hover:shadow-md transition-all duration-200"
             >
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
