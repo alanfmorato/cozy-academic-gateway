@@ -9,14 +9,14 @@ interface AuthContextProps {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
-  checkSession: () => Promise<void>;
+  checkSession: () => Promise<Session | null>;
 }
 
 const AuthContext = createContext<AuthContextProps>({
   user: null,
   session: null,
   isLoading: true,
-  checkSession: async () => {},
+  checkSession: async () => null,
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -53,6 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         title: "Erro de autenticação",
         description: "Não foi possível verificar sua sessão",
       });
+      return null;
     } finally {
       setIsLoading(false);
     }
