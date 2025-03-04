@@ -53,7 +53,7 @@ const EventForm: React.FC<EventFormProps> = ({
     descricao: "",
     data_hora: "",
     localizacao: "",
-    tipo_evento: "",
+    tipo_evento: "Outro", // Default to a valid value
   });
   const [formLoading, setFormLoading] = useState(false);
   const [universidadeLoading, setUniversidadeLoading] = useState(false);
@@ -69,10 +69,19 @@ const EventForm: React.FC<EventFormProps> = ({
   };
 
   const handleSelectChange = (value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      tipo_evento: value,
-    }));
+    // Validate that the selected value is one of the allowed types
+    if (tiposEvento.includes(value)) {
+      setFormData((prev) => ({
+        ...prev,
+        tipo_evento: value,
+      }));
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Tipo de evento inválido.",
+      });
+    }
   };
 
   const verificaECriaUniversidade = async (sigla: string) => {
@@ -169,7 +178,7 @@ const EventForm: React.FC<EventFormProps> = ({
     }
 
     // Verificar se o tipo do evento está dentro das opções permitidas
-    if (formData.tipo_evento && !tiposEvento.includes(formData.tipo_evento)) {
+    if (!formData.tipo_evento || !tiposEvento.includes(formData.tipo_evento)) {
       toast({
         variant: "destructive",
         title: "Erro",
@@ -195,9 +204,14 @@ const EventForm: React.FC<EventFormProps> = ({
         universidade_id: universidadeId,
       };
 
+      console.log("Dados do evento a serem enviados:", novoEvento);
+
       const { error } = await supabase.from("eventos").insert(novoEvento);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao inserir evento:", error);
+        throw error;
+      }
 
       toast({
         title: "Evento publicado",
@@ -210,7 +224,7 @@ const EventForm: React.FC<EventFormProps> = ({
         descricao: "",
         data_hora: "",
         localizacao: "",
-        tipo_evento: "",
+        tipo_evento: "Outro", // Reset to a valid default
       });
       onEventCreated();
     } catch (error: any) {
@@ -273,9 +287,13 @@ const EventForm: React.FC<EventFormProps> = ({
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="tipo_evento">Tipo de Evento</Label>
-                <Select value={formData.tipo_evento} onValueChange={handleSelectChange}>
+                <Select 
+                  value={formData.tipo_evento} 
+                  onValueChange={handleSelectChange}
+                  required
+                >
                   <SelectTrigger id="tipo_evento">
-                    <SelectValue placeholder="Selecione..." />
+                    <SelectValue placeholder="Selecione o tipo..." />
                   </SelectTrigger>
                   <SelectContent>
                     {tiposEvento.map((tipo) => (
