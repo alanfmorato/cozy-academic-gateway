@@ -101,7 +101,13 @@ const Materiais = () => {
 
       setCursos(cursosResponse.data);
       setUniversidades(universidadesResponse.data);
-      setMateriais(materiaisResponse.data);
+      
+      const typedData = materiaisResponse.data.map(item => ({
+        ...item,
+        status: (item.status as "disponivel" | "indisponivel" | null) || "disponivel"
+      }));
+      
+      setMateriais(typedData);
     } catch (error: any) {
       toast({
         variant: "destructive",

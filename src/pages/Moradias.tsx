@@ -70,7 +70,14 @@ const Moradias = () => {
         .order("updated_at", { ascending: false });
 
       if (error) throw error;
-      setMoradias(data);
+      
+      // Cast the status field to the correct type
+      const typedData = data?.map(item => ({
+        ...item,
+        status: (item.status as "disponivel" | "alugado" | null) || "disponivel"
+      }));
+      
+      setMoradias(typedData);
     } catch (error: any) {
       toast({
         variant: "destructive",

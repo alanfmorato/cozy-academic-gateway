@@ -175,7 +175,12 @@ const Marketplace = () => {
         setProdutos(produtosDemo);
         setUsandoDadosDemo(true);
       } else {
-        setProdutos(data);
+        const typedData = data.map(item => ({
+          ...item,
+          status: (item.status as "disponivel" | "vendido" | null) || "disponivel"
+        }));
+        
+        setProdutos(typedData);
         setUsandoDadosDemo(false);
       }
     } catch (error: any) {
