@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ interface EventFormProps {
   onEventCreated: () => void;
 }
 
+// Define os tipos de evento exatamente como devem estar na base de dados
 export const tiposEvento = [
   "Festa",
   "Palestra",
@@ -53,10 +54,42 @@ const EventForm: React.FC<EventFormProps> = ({
     descricao: "",
     data_hora: "",
     localizacao: "",
-    tipo_evento: "Outro", // Default to a valid value
+    tipo_evento: tiposEvento[0], // Define um valor válido inicial
   });
   const [formLoading, setFormLoading] = useState(false);
   const [universidadeLoading, setUniversidadeLoading] = useState(false);
+  const [tiposEventoDb, setTiposEventoDb] = useState<string[]>([]);
+
+  // Carregar os tipos de evento válidos do banco de dados
+  useEffect(() => {
+    const fetchAllowedEventTypes = async () => {
+      try {
+        // Teste com um evento que sabemos que funcionou
+        const { data, error } = await supabase
+          .from('eventos')
+          .select('tipo_evento')
+          .limit(5);
+        
+        if (error) {
+          console.error('Erro ao buscar tipos de evento:', error);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          // Extrair tipos de evento únicos
+          const tipos = [...new Set(data.map(item => item.tipo_evento).filter(Boolean))];
+          if (tipos.length > 0) {
+            console.log('Tipos de evento encontrados no banco:', tipos);
+            setTiposEventoDb(tipos);
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao buscar tipos de evento:', error);
+      }
+    };
+
+    fetchAllowedEventTypes();
+  }, []);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -69,7 +102,9 @@ const EventForm: React.FC<EventFormProps> = ({
   };
 
   const handleSelectChange = (value: string) => {
-    // Validate that the selected value is one of the allowed types
+    console.log(`Tipo de evento selecionado: "${value}"`);
+    
+    // Certifique-se de que é um valor permitido
     if (tiposEvento.includes(value)) {
       setFormData((prev) => ({
         ...prev,
@@ -79,7 +114,7 @@ const EventForm: React.FC<EventFormProps> = ({
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Tipo de evento inválido.",
+        description: `Tipo de evento inválido: "${value}". Valores permitidos: ${tiposEvento.join(', ')}`,
       });
     }
   };
@@ -182,7 +217,7 @@ const EventForm: React.FC<EventFormProps> = ({
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Tipo de evento inválido. Por favor, selecione um tipo válido.",
+        description: `Tipo de evento inválido: "${formData.tipo_evento}". Por favor, selecione um tipo válido.`,
       });
       return;
     }
@@ -198,8 +233,16 @@ const EventForm: React.FC<EventFormProps> = ({
         );
       }
 
+      // Criando o objeto do evento com um tipo válido garantido
+      const tipoEventoValido = formData.tipo_evento;
+      console.log(`Tipo de evento a ser enviado: "${tipoEventoValido}"`);
+
       const novoEvento = {
-        ...formData,
+        titulo: formData.titulo,
+        descricao: formData.descricao,
+        data_hora: formData.data_hora,
+        localizacao: formData.localizacao,
+        tipo_evento: tipoEventoValido,
         usuario_id: userId,
         universidade_id: universidadeId,
       };
@@ -210,7 +253,7 @@ const EventForm: React.FC<EventFormProps> = ({
 
       if (error) {
         console.error("Erro ao inserir evento:", error);
-        throw error;
+        throw new Error(`Erro ao inserir evento: ${error.message}`);
       }
 
       toast({
@@ -224,7 +267,7 @@ const EventForm: React.FC<EventFormProps> = ({
         descricao: "",
         data_hora: "",
         localizacao: "",
-        tipo_evento: "Outro", // Reset to a valid default
+        tipo_evento: tiposEvento[0], // Reset to a valid default
       });
       onEventCreated();
     } catch (error: any) {
@@ -303,6 +346,11 @@ const EventForm: React.FC<EventFormProps> = ({
                     ))}
                   </SelectContent>
                 </Select>
+                {tiposEventoDb.length > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Tipos usados recentemente: {tiposEventoDb.join(', ')}
+                  </p>
+                )}
               </div>
             </div>
             <div className="grid gap-2">
