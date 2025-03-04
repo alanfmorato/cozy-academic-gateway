@@ -140,7 +140,7 @@ const Moradias = () => {
               </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todas as universidades</SelectItem>
+              <SelectItem value="all">Todas as universidades</SelectItem>
               {universidades.map((uni) => (
                 <SelectItem key={uni.id} value={uni.id}>
                   {uni.sigla} - {uni.nome}
@@ -155,7 +155,7 @@ const Moradias = () => {
         moradias={moradias}
         loading={loading}
         searchTerm={searchTerm}
-        universidadeFilter={selectedUniversidade}
+        universidadeFilter={selectedUniversidade === "all" ? "" : selectedUniversidade}
         expandedMoradia={expandedMoradia}
         toggleMoradiaExpansion={toggleMoradiaExpansion}
         onOpenForm={() => setFormOpen(true)}
