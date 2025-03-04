@@ -8,6 +8,13 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./context/AuthContext";
+import Layout from "./components/Layout";
+import Cursos from "./pages/Cursos";
+import Moradias from "./pages/Moradias";
+import Marketplace from "./pages/Marketplace";
+import Eventos from "./pages/Eventos";
+import Materiais from "./pages/Materiais";
+import Estagios from "./pages/Estagios";
 
 const queryClient = new QueryClient();
 
@@ -19,8 +26,14 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/" element={<Layout><Index /></Layout>} />
+            <Route path="/cursos" element={<Layout><Cursos /></Layout>} />
+            <Route path="/moradias" element={<Layout><Moradias /></Layout>} />
+            <Route path="/marketplace" element={<Layout><Marketplace /></Layout>} />
+            <Route path="/eventos" element={<Layout><Eventos /></Layout>} />
+            <Route path="/materiais" element={<Layout><Materiais /></Layout>} />
+            <Route path="/estagios" element={<Layout><Estagios /></Layout>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
