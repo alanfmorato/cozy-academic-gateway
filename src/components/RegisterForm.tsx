@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { signUp } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface RegisterFormProps {
   onSwitchToLogin: () => void;
@@ -21,13 +22,14 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
   const [tipoUsuario, setTipoUsuario] = useState("estudante");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [exploringUniversities, setExploringUniversities] = useState(false);
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    if (!fullName || !email || !university || !password) {
+    if (!fullName || !email || (!university && !exploringUniversities) || !password) {
       toast({
         variant: "destructive",
         title: "Campos obrigatórios",
@@ -51,7 +53,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
       email,
       password,
       full_name: fullName,
-      university,
+      university: exploringUniversities ? "explorando" : university,
       tipo_usuario: tipoUsuario
     });
     setIsLoading(false);
@@ -106,23 +108,45 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="university">Universidade</Label>
-          <Select
-            value={university}
-            onValueChange={setUniversity}
-            disabled={isLoading}
-          >
-            <SelectTrigger className="pl-10">
-              <SelectValue placeholder="Selecione sua universidade" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="usp">Universidade de São Paulo</SelectItem>
-              <SelectItem value="unicamp">Universidade Estadual de Campinas</SelectItem>
-              <SelectItem value="ufrj">Universidade Federal do Rio de Janeiro</SelectItem>
-              <SelectItem value="unb">Universidade de Brasília</SelectItem>
-              <SelectItem value="ufmg">Universidade Federal de Minas Gerais</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="university">Universidade</Label>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="exploringUniversities" 
+                checked={exploringUniversities} 
+                onCheckedChange={(checked) => {
+                  setExploringUniversities(checked === true);
+                  if (checked) setUniversity("");
+                }}
+                disabled={isLoading}
+              />
+              <Label 
+                htmlFor="exploringUniversities" 
+                className="text-sm cursor-pointer text-muted-foreground"
+              >
+                Ainda explorando universidades
+              </Label>
+            </div>
+          </div>
+          
+          {!exploringUniversities && (
+            <Select
+              value={university}
+              onValueChange={setUniversity}
+              disabled={isLoading || exploringUniversities}
+            >
+              <SelectTrigger className="pl-10">
+                <SelectValue placeholder="Selecione sua universidade" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="usp">Universidade de São Paulo</SelectItem>
+                <SelectItem value="unicamp">Universidade Estadual de Campinas</SelectItem>
+                <SelectItem value="ufrj">Universidade Federal do Rio de Janeiro</SelectItem>
+                <SelectItem value="unb">Universidade de Brasília</SelectItem>
+                <SelectItem value="ufmg">Universidade Federal de Minas Gerais</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
           <div className="absolute left-3 top-[2.3rem] transform -translate-y-1/2 h-4 w-4 text-muted-foreground">
             <Building className="h-4 w-4" />
           </div>
