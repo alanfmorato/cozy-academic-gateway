@@ -114,7 +114,7 @@ const Caronas = () => {
                   
                   const { data: profileData } = await supabase
                     .from("profiles")
-                    .select("full_name, email")
+                    .select("full_name")
                     .eq("id", reserva.usuario_id)
                     .maybeSingle();
                   
@@ -122,7 +122,7 @@ const Caronas = () => {
                     ...reserva,
                     usuario: profileData ? {
                       full_name: profileData.full_name || "Usuário",
-                      email: profileData.email || "usuario@exemplo.com"
+                      email: "usuario@exemplo.com" // Using a default email as it's not in the profiles table
                     } : {
                       full_name: "Usuário",
                       email: "usuario@exemplo.com"
