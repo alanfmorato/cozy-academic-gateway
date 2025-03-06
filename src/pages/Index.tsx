@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { 
@@ -18,6 +18,16 @@ import { Button } from "@/components/ui/button";
 const Index = () => {
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    console.log("Index page loaded", { user, isLoading });
+    // Check for any assets that might be failing to load
+    window.addEventListener('error', (e) => {
+      if (e.target && (e.target as any).tagName === 'SCRIPT' || (e.target as any).tagName === 'LINK') {
+        console.error('Resource failed to load:', (e.target as any).src || (e.target as any).href);
+      }
+    }, true);
+  }, [user, isLoading]);
 
   // Mapeamento de universidade para nomes completos
   const universidadeNomes: Record<string, string> = {
