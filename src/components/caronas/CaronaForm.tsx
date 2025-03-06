@@ -23,9 +23,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Calendar } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon, Clock } from "lucide-react";
 import { Carona, CaronaFormData } from "@/types/carona";
-import InputWithIcon from "@/components/forms/common/InputWithIcon";
+import { format, parse, set } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface CaronaFormProps {
   open: boolean;
@@ -44,10 +51,11 @@ export const CaronaForm: React.FC<CaronaFormProps> = ({
 }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<CaronaFormData>({
+  const [date, setDate] = useState<Date | undefined>(undefined);
+  const [time, setTime] = useState<string>("12:00");
+  const [formData, setFormData] = useState<Omit<CaronaFormData, "horario_saida"> & { horario_saida?: string }>({
     local_saida: "",
     local_chegada: "",
-    horario_saida: "",
     valor_vaga: 0,
     qtd_vagas: 1,
     forma_pagamento: "pix",
@@ -66,11 +74,15 @@ export const CaronaForm: React.FC<CaronaFormProps> = ({
         observacoes 
       } = editingCarona;
 
+      // Parse the date from the carona's horario_saida
+      const parsedDate = new Date(horario_saida);
+      
+      setDate(parsedDate);
+      setTime(format(parsedDate, "HH:mm"));
+      
       setFormData({
         local_saida,
         local_chegada,
-        // Format the date to local datetime-local input format
-        horario_saida: new Date(horario_saida).toISOString().slice(0, 16),
         valor_vaga,
         qtd_vagas,
         forma_pagamento,
@@ -80,10 +92,11 @@ export const CaronaForm: React.FC<CaronaFormProps> = ({
   }, [editingCarona]);
 
   const resetForm = () => {
+    setDate(undefined);
+    setTime("12:00");
     setFormData({
       local_saida: "",
       local_chegada: "",
-      horario_saida: "",
       valor_vaga: 0,
       qtd_vagas: 1,
       forma_pagamento: "pix",
@@ -114,6 +127,10 @@ export const CaronaForm: React.FC<CaronaFormProps> = ({
     }));
   };
 
+  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTime(e.target.value);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
@@ -124,12 +141,36 @@ export const CaronaForm: React.FC<CaronaFormProps> = ({
       return;
     }
 
+    if (!date) {
+      toast({
+        variant: "destructive",
+        title: "Selecione uma data para a carona",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
+      // Combine date and time into a single Date object
+      // Parse the time string into hours and minutes
+      const [hours, minutes] = time.split(':').map(Number);
+      
+      // Create a new date with the selected date and time
+      const combinedDate = set(date, {
+        hours,
+        minutes,
+        seconds: 0,
+        milliseconds: 0
+      });
+      
+      // Format as ISO string for storage
+      const isoDateTime = combinedDate.toISOString();
+
       // Convert form data to proper types
       const caronaData = {
         ...formData,
+        horario_saida: isoDateTime, // Use the ISO string with correctly set time
         valor_vaga: Number(formData.valor_vaga),
         qtd_vagas: Number(formData.qtd_vagas),
         usuario_id: user.id,
@@ -176,7 +217,7 @@ export const CaronaForm: React.FC<CaronaFormProps> = ({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button className="gap-2">
-          <Calendar className="h-4 w-4" />
+          <CalendarIcon className="h-4 w-4" />
           Oferecer carona
         </Button>
       </DialogTrigger>
@@ -214,16 +255,51 @@ export const CaronaForm: React.FC<CaronaFormProps> = ({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="horario_saida">Horário de saída *</Label>
-            <Input
-              id="horario_saida"
-              name="horario_saida"
-              type="datetime-local"
-              value={formData.horario_saida}
-              onChange={handleChange}
-              required
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Data da carona *</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date ? format(date, "dd/MM/yyyy") : <span>Selecione uma data</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={setDate}
+                    initialFocus
+                    disabled={(date) => date < new Date()}
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="time">Horário *</Label>
+              <div className="flex items-center border border-input rounded-md overflow-hidden">
+                <div className="bg-muted px-3 py-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <Input
+                  id="time"
+                  type="time"
+                  value={time}
+                  onChange={handleTimeChange}
+                  className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                  required
+                />
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -281,7 +357,7 @@ export const CaronaForm: React.FC<CaronaFormProps> = ({
             <Textarea
               id="observacoes"
               name="observacoes"
-              value={formData.observacoes}
+              value={formData.observacoes || ""}
               onChange={handleChange}
               placeholder="Ex: Ponto de encontro, regras do carro, se aceita animais, espaço para mala..."
               className="h-20"

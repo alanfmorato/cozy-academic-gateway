@@ -58,6 +58,7 @@ const Caronas = () => {
       // Filter out caronas that are more than 2 hours past their departure time
       const now = new Date();
       const filteredCaronas = todasCaronas ? todasCaronas.filter(carona => {
+        // Here we handle timezone consistently by using parseISO
         const departureTime = parseISO(carona.horario_saida);
         const twoHoursAfterDeparture = addHours(departureTime, 2);
         return now < twoHoursAfterDeparture;
