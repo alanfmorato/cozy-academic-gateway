@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -19,6 +20,7 @@ import {
   Trash2,
   Star,
   Heart,
+  X,
 } from "lucide-react";
 import {
   Card,
@@ -64,6 +66,7 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
   const [isFavorite, setIsFavorite] = useState(false);
   const [loadingFavorite, setLoadingFavorite] = useState(false);
   const [userData, setUserData] = useState<{ full_name: string; email: string } | null>(null);
+  const [userReservationId, setUserReservationId] = useState<string | null>(null);
 
   const isOwner = user?.id === carona.usuario_id;
   const formattedDate = format(parseISO(carona.horario_saida), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
@@ -85,6 +88,7 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
         (r) => r.usuario_id === user.id && r.status === "confirmado"
       );
       setIsReserved(!!usuarioReserva);
+      setUserReservationId(usuarioReserva?.id || null);
     }
   }, [reservas, user]);
 
@@ -233,7 +237,7 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
   };
 
   const handleCancelarReserva = async () => {
-    if (!user) return;
+    if (!user || !userReservationId) return;
 
     setLoadingReserva(true);
 
@@ -241,15 +245,18 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
       const { error } = await supabase
         .from("reservas_caronas")
         .delete()
-        .eq("carona_id", carona.id)
-        .eq("usuario_id", user.id);
+        .eq("id", userReservationId);
 
       if (error) throw error;
 
       toast({
         title: "Reserva cancelada com sucesso!",
+        description: "A vaga foi liberada e está disponível para outros usuários."
       });
 
+      setIsReserved(false);
+      setUserReservationId(null);
+      
       fetchReservas();
       onRefresh();
     } catch (error: any) {
@@ -473,7 +480,7 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
                 onClick={handleCancelarReserva}
                 disabled={loadingReserva}
               >
-                Cancelar Reserva
+                <X className="h-4 w-4 mr-1" /> Cancelar Reserva
               </Button>
             ) : (
               <Button
