@@ -28,6 +28,7 @@ interface SidebarProps {
   closeMenu: () => void;
 }
 
+// Added key to force re-render when needed
 const Sidebar: React.FC<SidebarProps> = ({ menuOpen, setMenuOpen, closeMenu }) => {
   const { user } = useAuth();
   const location = useLocation();
