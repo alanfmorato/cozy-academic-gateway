@@ -16,6 +16,7 @@ export interface Carona {
     full_name: string;
     email: string;
   };
+  reservas_caronas?: ReservaCarona[];
 }
 
 export interface ReservaCarona {
