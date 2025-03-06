@@ -94,6 +94,16 @@
   html {
     @apply scroll-smooth;
   }
+  
+  /* Improve mobile interactions */
+  input, textarea, select, button {
+    @apply text-base;
+  }
+  
+  /* Improve tap targets on mobile */
+  button, a {
+    @apply touch-manipulation;
+  }
 }
 
 @layer utilities {
@@ -104,6 +114,23 @@
   
   .scrollbar-none::-webkit-scrollbar {
     display: none;
+  }
+  
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/30 rounded-full;
   }
 
   .glass-morphism {
@@ -132,5 +159,33 @@
   
   .text-gradient {
     @apply bg-gradient-to-br from-foreground via-foreground/90 to-foreground/70 bg-clip-text text-transparent;
+  }
+  
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+  
+  .active-scale {
+    @apply active:scale-95 transition-transform;
+  }
+  
+  .modal-animation {
+    @apply transition-all duration-300 ease-out;
+  }
+}
+
+/* Mobile-specific improvements */
+@media (max-width: 640px) {
+  .dialog-responsive {
+    width: calc(100% - 32px) !important;
+    max-width: calc(100% - 32px) !important;
+  }
+  
+  .btn-stack {
+    @apply flex-col w-full gap-2;
+  }
+  
+  .btn-stack > * {
+    @apply w-full;
   }
 }

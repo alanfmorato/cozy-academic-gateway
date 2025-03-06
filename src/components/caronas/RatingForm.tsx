@@ -65,8 +65,8 @@ export const RatingForm: React.FC<RatingFormProps> = ({
   };
 
   return (
-    <div className="bg-card border rounded-lg p-4 mt-4">
-      <h4 className="font-medium mb-2">Avaliar motorista</h4>
+    <div className="bg-card border rounded-lg p-4 mt-4 animate-fade-in">
+      <h4 className="font-medium mb-2 text-center">Avaliar motorista</h4>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="flex items-center justify-center gap-1">
           {[1, 2, 3, 4, 5].map((star) => (
@@ -76,10 +76,10 @@ export const RatingForm: React.FC<RatingFormProps> = ({
               onClick={() => setRating(star)}
               onMouseEnter={() => setHoveredRating(star)}
               onMouseLeave={() => setHoveredRating(0)}
-              className="text-2xl focus:outline-none"
+              className="p-1 focus:outline-none transition-transform hover:scale-110 active:scale-95"
             >
               <Star
-                className={`h-8 w-8 ${
+                className={`h-8 w-8 transition-colors ${
                   star <= (hoveredRating || rating)
                     ? "fill-yellow-400 text-yellow-400"
                     : "text-gray-300"
@@ -92,13 +92,22 @@ export const RatingForm: React.FC<RatingFormProps> = ({
           placeholder="Deixe um comentário (opcional)"
           value={comentario}
           onChange={(e) => setComentario(e.target.value)}
-          className="h-20"
+          className="h-20 resize-none"
         />
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onClose}>
+        <div className="flex flex-col sm:flex-row justify-end gap-2">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={onClose}
+            className="w-full sm:w-auto order-2 sm:order-1"
+          >
             Cancelar
           </Button>
-          <Button type="submit" disabled={loading || rating === 0}>
+          <Button 
+            type="submit" 
+            disabled={loading || rating === 0}
+            className="w-full sm:w-auto order-1 sm:order-2"
+          >
             {loading ? "Enviando..." : "Enviar Avaliação"}
           </Button>
         </div>

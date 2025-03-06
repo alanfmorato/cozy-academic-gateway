@@ -51,7 +51,7 @@ const EventForm: React.FC<EventFormProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[550px]">
+      <DialogContent className="sm:max-w-[550px] w-[calc(100%-2rem)] max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Publicar Novo Evento</DialogTitle>
@@ -60,18 +60,29 @@ const EventForm: React.FC<EventFormProps> = ({
             </DialogDescription>
           </DialogHeader>
           
-          <EventFormFields
-            formData={formData}
-            tiposEventoDb={tiposEventoDb}
-            handleInputChange={handleInputChange}
-            handleSelectChange={handleSelectChange}
-          />
+          <div className="py-4">
+            <EventFormFields
+              formData={formData}
+              tiposEventoDb={tiposEventoDb}
+              handleInputChange={handleInputChange}
+              handleSelectChange={handleSelectChange}
+            />
+          </div>
           
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+              className="sm:w-auto w-full"
+            >
               Cancelar
             </Button>
-            <Button type="submit" disabled={formLoading || universidadeLoading}>
+            <Button 
+              type="submit" 
+              disabled={formLoading || universidadeLoading}
+              className="sm:w-auto w-full"
+            >
               {formLoading ? "Publicando..." : "Publicar Evento"}
             </Button>
           </DialogFooter>
