@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Menu, X } from "lucide-react";
@@ -7,7 +6,6 @@ import { useAuth } from "@/context/AuthContext";
 import Sidebar from "./Sidebar";
 import LoadingScreen from "./LoadingScreen";
 import { toast } from "@/hooks/use-toast";
-import ThemeToggle from "../ThemeToggle";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -21,7 +19,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const sessionVerified = useRef(false);
   
   useEffect(() => {
-    // Only verify session once on component mount
     const verifySession = async () => {
       if (sessionVerified.current) return;
       
@@ -107,13 +104,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         >
           {menuOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
-        <div className="hidden md:block">
-          <ThemeToggle />
-        </div>
-      </div>
-
-      <div className="fixed top-4 right-4 z-50 md:hidden">
-        <ThemeToggle />
       </div>
 
       <Sidebar 
