@@ -83,7 +83,16 @@ export const ChatForm: React.FC<ChatFormProps> = ({
     try {
       const { data, error } = await supabase
         .from("mensagens_caronas")
-        .select(`*, remetente:profiles(full_name)`)
+        .select(`
+          id,
+          carona_id,
+          remetente_id,
+          destinatario_id,
+          mensagem,
+          lida,
+          created_at,
+          remetente:profiles(full_name)
+        `)
         .eq("carona_id", caronaId)
         .or(`remetente_id.eq.${user.id},destinatario_id.eq.${user.id}`)
         .or(`remetente_id.eq.${destinatarioId},destinatario_id.eq.${destinatarioId}`)
@@ -91,7 +100,20 @@ export const ChatForm: React.FC<ChatFormProps> = ({
 
       if (error) throw error;
       
-      setMensagens(data || []);
+      // Transform the data to match MensagemCarona type
+      const typedMessages = data?.map(msg => {
+        // Handle possible error from the query by ensuring remetente has full_name
+        const remetente = typeof msg.remetente === 'object' && msg.remetente !== null 
+          ? { full_name: msg.remetente.full_name || 'Usuário' }
+          : { full_name: 'Usuário' };
+          
+        return {
+          ...msg,
+          remetente
+        } as MensagemCarona;
+      }) || [];
+      
+      setMensagens(typedMessages);
       
       // Marcar mensagens recebidas como lidas
       const mensagensRecebidas = data?.filter(

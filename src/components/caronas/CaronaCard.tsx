@@ -93,11 +93,25 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
     try {
       const { data, error } = await supabase
         .from("reservas_caronas")
-        .select(`*, usuario:profiles(full_name, email)`)
+        .select(`
+          id,
+          carona_id,
+          usuario_id,
+          status,
+          created_at,
+          updated_at,
+          usuario:profiles(full_name)
+        `)
         .eq("carona_id", carona.id);
 
       if (error) throw error;
-      setReservas(data || []);
+      
+      const typedData = data?.map(item => ({
+        ...item,
+        status: item.status as "confirmado" | "cancelado"
+      })) as ReservaCarona[];
+      
+      setReservas(typedData || []);
     } catch (error: any) {
       console.error("Erro ao carregar reservas:", error);
     }
@@ -107,12 +121,17 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("full_name, email")
+        .select("full_name")
         .eq("id", carona.usuario_id)
         .single();
 
       if (error) throw error;
-      setUserData(data);
+      
+      // Since profiles doesn't have an email column, we'll use only full_name and provide a placeholder for email
+      setUserData({
+        full_name: data.full_name || "Usuário",
+        email: "usuario@exemplo.com" // Placeholder since email doesn't exist
+      });
     } catch (error: any) {
       console.error("Erro ao carregar informações do usuário:", error);
     }
@@ -275,7 +294,7 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
               <Calendar className="h-4 w-4" /> {formattedDate} às {formattedTime}
             </CardDescription>
           </div>
-          <Badge variant={carona.status === "disponivel" ? "success" : "secondary"}>
+          <Badge variant={carona.status === "disponivel" ? "secondary" : "outline"}>
             {carona.status === "disponivel" ? "Disponível" : "Completo"}
           </Badge>
         </div>
@@ -361,7 +380,7 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
                           .map((reserva) => (
                             <li key={reserva.id} className="text-sm">
                               <p>{reserva.usuario?.full_name}</p>
-                              <p className="text-muted-foreground">{reserva.usuario?.email}</p>
+                              {/* <p className="text-muted-foreground">{reserva.usuario?.email}</p> */}
                             </li>
                           ))}
                       </ul>

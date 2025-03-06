@@ -27,7 +27,6 @@ export interface ReservaCarona {
   updated_at: string;
   usuario?: {
     full_name: string;
-    email: string;
   };
 }
 

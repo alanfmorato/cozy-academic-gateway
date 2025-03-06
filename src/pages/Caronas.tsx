@@ -18,7 +18,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   Tabs,
@@ -26,13 +25,6 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 const Caronas = () => {
   const { user } = useAuth();
@@ -60,17 +52,21 @@ const Caronas = () => {
         .from("caronas")
         .select(`
           *,
-          usuario:profiles(full_name, email)
+          usuario:profiles(full_name)
         `)
         .order("horario_saida", { ascending: true });
 
       if (errorTodasCaronas) throw errorTodasCaronas;
 
-      // Make sure status is the right type
+      // Make sure status is the right type and add default email
       const typedData = todasCaronas?.map(item => ({
         ...item,
-        status: (item.status as "disponivel" | "completo" | null) || "disponivel"
-      }));
+        status: (item.status as "disponivel" | "completo"),
+        usuario: item.usuario ? {
+          full_name: item.usuario.full_name || "Usuário",
+          email: "usuario@exemplo.com" // Placeholder email
+        } : undefined
+      })) as Carona[];
       
       setCaronas(typedData || []);
 
@@ -80,7 +76,7 @@ const Caronas = () => {
           .from("caronas")
           .select(`
             *,
-            usuario:profiles(full_name, email)
+            usuario:profiles(full_name)
           `)
           .eq("usuario_id", user.id)
           .order("horario_saida", { ascending: true });
@@ -90,8 +86,12 @@ const Caronas = () => {
         // Cast the status field to the correct type for user's caronas
         const typedUserCaronas = userCaronas?.map(item => ({
           ...item,
-          status: (item.status as "disponivel" | "completo" | null) || "disponivel"
-        }));
+          status: (item.status as "disponivel" | "completo"),
+          usuario: item.usuario ? {
+            full_name: item.usuario.full_name || "Usuário",
+            email: "usuario@exemplo.com" // Placeholder email
+          } : undefined
+        })) as Carona[];
         
         setMinhasCaronas(typedUserCaronas || []);
 
@@ -111,7 +111,7 @@ const Caronas = () => {
             .from("caronas")
             .select(`
               *,
-              usuario:profiles(full_name, email)
+              usuario:profiles(full_name)
             `)
             .in("id", caronaIds)
             .order("horario_saida", { ascending: true });
@@ -121,8 +121,12 @@ const Caronas = () => {
           // Cast the status field to the correct type for user's reservations
           const typedReservedCaronas = caronasReservadas?.map(item => ({
             ...item,
-            status: (item.status as "disponivel" | "completo" | null) || "disponivel"
-          }));
+            status: (item.status as "disponivel" | "completo"),
+            usuario: item.usuario ? {
+              full_name: item.usuario.full_name || "Usuário",
+              email: "usuario@exemplo.com" // Placeholder email
+            } : undefined
+          })) as Carona[];
           
           setMinhasReservas(typedReservedCaronas || []);
         } else {
@@ -200,7 +204,6 @@ const Caronas = () => {
           </p>
         </div>
         <CaronaForm
-          user={user}
           onCaronaCreated={fetchCaronas}
           open={formOpen}
           setOpen={setFormOpen}
