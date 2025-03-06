@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -77,26 +76,17 @@ const Caronas = () => {
       setCaronas(caronasComUsuarios || []);
 
       if (user) {
-        // Fetch user's caronas with detailed reservation data
-        // Fix: Changed the nested select to correctly join profiles
+        // Fetch user's caronas
         const { data: userCaronas, error: errorUserCaronas } = await supabase
           .from("caronas")
-          .select(`
-            *,
-            reservas_caronas(
-              id,
-              usuario_id,
-              status,
-              created_at
-            )
-          `)
+          .select("*")
           .eq("usuario_id", user.id)
           .order("horario_saida", { ascending: true });
 
         if (errorUserCaronas) throw errorUserCaronas;
 
-        // Process user's caronas with profile data and fetch passenger profiles separately
-        const userCaronasComUsuarios = await Promise.all(
+        // For each carona, fetch its reservations separately
+        const userCaronasComReservas = await Promise.all(
           (userCaronas || []).map(async (carona) => {
             // Get user profile information
             const { data: userData } = await supabase
@@ -105,32 +95,48 @@ const Caronas = () => {
               .eq("id", carona.usuario_id)
               .single();
             
-            // Process reservations to include passenger profile data
-            let reservasProcessadas = [];
-            if (carona.reservas_caronas && carona.reservas_caronas.length > 0) {
-              reservasProcessadas = await Promise.all(
-                carona.reservas_caronas.map(async (reserva: any) => {
-                  if (!reserva.usuario_id) return reserva;
-                  
-                  const { data: profileData } = await supabase
-                    .from("profiles")
-                    .select("full_name")
-                    .eq("id", reserva.usuario_id)
-                    .maybeSingle();
-                  
-                  return {
-                    ...reserva,
-                    usuario: profileData ? {
-                      full_name: profileData.full_name || "Usuário",
-                      email: "usuario@exemplo.com" // Using a default email as it's not in the profiles table
-                    } : {
-                      full_name: "Usuário",
-                      email: "usuario@exemplo.com"
-                    }
-                  };
-                })
-              );
+            // Get reservations for this carona
+            const { data: reservasData, error: reservasError } = await supabase
+              .from("reservas_caronas")
+              .select("*")
+              .eq("carona_id", carona.id);
+              
+            if (reservasError) {
+              console.error("Erro ao buscar reservas:", reservasError);
+              return {
+                ...carona,
+                status: (carona.status as "disponivel" | "completo"),
+                usuario: { 
+                  full_name: userData?.full_name || user.user_metadata?.full_name || "Usuário", 
+                  email: user.email || "usuario@exemplo.com" 
+                },
+                reservas_caronas: []
+              } as Carona;
             }
+            
+            // Process reservations to include passenger profile data
+            const reservasProcessadas = await Promise.all(
+              (reservasData || []).map(async (reserva) => {
+                if (!reserva.usuario_id) return reserva;
+                
+                const { data: profileData } = await supabase
+                  .from("profiles")
+                  .select("full_name")
+                  .eq("id", reserva.usuario_id)
+                  .maybeSingle();
+                
+                return {
+                  ...reserva,
+                  usuario: profileData ? {
+                    full_name: profileData.full_name || "Usuário",
+                    email: "usuario@exemplo.com" // Using a default email as it's not in the profiles table
+                  } : {
+                    full_name: "Usuário",
+                    email: "usuario@exemplo.com"
+                  }
+                };
+              })
+            );
             
             return {
               ...carona,
@@ -144,7 +150,7 @@ const Caronas = () => {
           })
         );
         
-        setMinhasCaronas(userCaronasComUsuarios || []);
+        setMinhasCaronas(userCaronasComReservas || []);
 
         // Fetch user's reservations
         const { data: reservasData, error: errorReservas } = await supabase

@@ -133,38 +133,38 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
 
   const fetchReservas = async () => {
     try {
+      // Modified query to avoid the relationship issue
       const { data, error } = await supabase
         .from("reservas_caronas")
-        .select(`
-          id,
-          carona_id,
-          usuario_id,
-          status,
-          created_at,
-          updated_at,
-          usuario:profiles(full_name)
-        `)
+        .select("*")
         .eq("carona_id", carona.id);
 
       if (error) throw error;
       
-      const typedReservas: ReservaCarona[] = data?.map(item => {
-        const usuario = item.usuario && typeof item.usuario === 'object' 
-          ? { full_name: (item.usuario as any).full_name || 'Usuário' }
-          : { full_name: 'Usuário' };
-          
+      // Process reservations separately to get user information
+      const processedReservas = await Promise.all((data || []).map(async (reserva) => {
+        let userInfo = { full_name: 'Usuário' };
+        
+        if (reserva.usuario_id) {
+          const { data: userData } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("id", reserva.usuario_id)
+            .maybeSingle();
+            
+          if (userData) {
+            userInfo = { full_name: userData.full_name || 'Usuário' };
+          }
+        }
+        
         return {
-          id: item.id,
-          carona_id: item.carona_id,
-          usuario_id: item.usuario_id,
-          status: item.status as "confirmado" | "cancelado",
-          created_at: item.created_at,
-          updated_at: item.updated_at,
-          usuario
-        };
-      }) || [];
+          ...reserva,
+          status: reserva.status as "confirmado" | "cancelado",
+          usuario: userInfo
+        } as ReservaCarona;
+      }));
       
-      setReservas(typedReservas);
+      setReservas(processedReservas);
     } catch (error: any) {
       console.error("Erro ao carregar reservas:", error);
       toast({
@@ -187,7 +187,7 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
       
       setUserData({
         full_name: data.full_name || "Usuário",
-        email: "usuario@exemplo.com"
+        email: "usuario@exemplo.com" // Default email since it's not in profiles
       });
     } catch (error: any) {
       console.error("Erro ao carregar informações do usuário:", error);
@@ -210,12 +210,18 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
       
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name, email, foto_perfil, university")
+        .select("id, full_name, university")
         .in("id", passengerIds);
 
       if (error) throw error;
       
-      setPassengerProfiles(data || []);
+      // Add default email value since it's not in the profiles table
+      const processedProfiles = (data || []).map(profile => ({
+        ...profile,
+        email: "usuario@exemplo.com"
+      }));
+      
+      setPassengerProfiles(processedProfiles);
     } catch (error: any) {
       console.error("Erro ao carregar perfis dos passageiros:", error);
       toast({
@@ -272,6 +278,7 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
     setLoadingReserva(true);
 
     try {
+      // Check if user already has a reservation
       const { data: existingReservation, error: queryError } = await supabase
         .from("reservas_caronas")
         .select("id")
@@ -289,13 +296,22 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
         return;
       }
 
-      const { data, error } = await supabase.from("reservas_caronas").insert({
-        carona_id: carona.id,
-        usuario_id: user.id,
-        status: "confirmado",
-      }).select();
+      // Create the reservation
+      const { data, error } = await supabase
+        .from("reservas_caronas")
+        .insert({
+          carona_id: carona.id,
+          usuario_id: user.id,
+          status: "confirmado",
+        })
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro detalhado ao reservar:", error);
+        throw error;
+      }
+
+      console.log("Reserva criada com sucesso:", data);
 
       if (data && data.length > 0) {
         setUserReservationId(data[0].id);
@@ -309,8 +325,9 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
       // Enable notifications by default after reserving
       setNotificationsEnabled(true);
 
+      // Refresh the data
       fetchReservas();
-      onRefresh();
+      onRefresh(); // Refresh parent component data
     } catch (error: any) {
       console.error("Erro ao reservar carona:", error);
       toast({
