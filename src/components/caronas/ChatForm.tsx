@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -149,24 +150,28 @@ export const ChatForm: React.FC<ChatFormProps> = ({
         </h2>
 
         <div className="overflow-y-auto h-64 mb-4">
-          {mensagens.map((msg) => (
-            <div
-              key={msg.id}
-              className={`mb-2 p-2 rounded-md ${
-                msg.remetente_id === user?.id
-                  ? "bg-primary/10 ml-auto w-fit"
-                  : "bg-secondary/10 mr-auto w-fit"
-              }`}
-            >
-              <p className="text-sm">
-                {msg.mensagem}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {msg.remetente?.full_name || "Usuário"} -{" "}
-                {new Date(msg.created_at).toLocaleTimeString()}
-              </p>
-            </div>
-          ))}
+          {mensagens.length > 0 ? (
+            mensagens.map((msg) => (
+              <div
+                key={msg.id}
+                className={`mb-2 p-2 rounded-md ${
+                  msg.remetente_id === user?.id
+                    ? "bg-primary/10 ml-auto w-fit"
+                    : "bg-secondary/10 mr-auto w-fit"
+                }`}
+              >
+                <p className="text-sm">
+                  {msg.mensagem}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {msg.remetente?.full_name || "Usuário"} -{" "}
+                  {new Date(msg.created_at).toLocaleTimeString()}
+                </p>
+              </div>
+            ))
+          ) : (
+            <p className="text-center text-muted-foreground">Nenhuma mensagem ainda. Inicie a conversa!</p>
+          )}
         </div>
 
         <div className="flex items-center">
@@ -175,6 +180,12 @@ export const ChatForm: React.FC<ChatFormProps> = ({
             onChange={(e) => setMensagem(e.target.value)}
             placeholder="Digite sua mensagem..."
             className="flex-grow mr-2"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
           />
           <Button onClick={handleSendMessage} disabled={loading}>
             <Send className="h-4 w-4 mr-2" />

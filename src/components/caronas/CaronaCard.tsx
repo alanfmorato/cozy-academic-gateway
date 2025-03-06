@@ -188,6 +188,23 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
     setLoadingReserva(true);
 
     try {
+      const { data: existingReservation, error: queryError } = await supabase
+        .from("reservas_caronas")
+        .select("id")
+        .eq("carona_id", carona.id)
+        .eq("usuario_id", user.id)
+        .maybeSingle();
+
+      if (queryError) throw queryError;
+
+      if (existingReservation) {
+        toast({
+          title: "Você já possui uma reserva para esta carona",
+        });
+        setLoadingReserva(false);
+        return;
+      }
+
       const { error } = await supabase.from("reservas_caronas").insert({
         carona_id: carona.id,
         usuario_id: user.id,
