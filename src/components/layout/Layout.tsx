@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import Sidebar from "./Sidebar";
 import LoadingScreen from "./LoadingScreen";
 import { toast } from "@/hooks/use-toast";
