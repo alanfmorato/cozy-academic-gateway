@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -107,7 +106,6 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
       if (error) throw error;
       
       const typedReservas: ReservaCarona[] = data?.map(item => {
-        // Add null check for item.usuario
         const usuario = item.usuario && typeof item.usuario === 'object' 
           ? { full_name: (item.usuario as any).full_name || 'Usuário' }
           : { full_name: 'Usuário' };
