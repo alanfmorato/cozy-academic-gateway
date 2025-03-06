@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { format, parseISO, addHours } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -87,6 +87,7 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
   const [showPassengerList, setShowPassengerList] = useState(false);
   const [passengerProfiles, setPassengerProfiles] = useState<any[]>([]);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [fetchingReservas, setFetchingReservas] = useState(false);
 
   const isOwner = user?.id === carona.usuario_id;
   const formattedDate = format(parseISO(carona.horario_saida), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
@@ -124,7 +125,7 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
     }
   }, [reservas, user]);
 
-  // Fetch passenger profiles when needed
+  // Fetch passenger profiles whenever reservations change and for the owner
   useEffect(() => {
     if (isOwner && reservas.length > 0) {
       fetchPassengerProfiles();
@@ -132,28 +133,43 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
   }, [reservas, isOwner]);
 
   const fetchReservas = async () => {
+    if (fetchingReservas) return;
+    setFetchingReservas(true);
+    console.log("Fetching reservations for carona:", carona.id);
+    
     try {
-      // Modified query to avoid the relationship issue
       const { data, error } = await supabase
         .from("reservas_caronas")
         .select("*")
         .eq("carona_id", carona.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching reservations:", error);
+        throw error;
+      }
+      
+      console.log("Raw reservations data:", data);
       
       // Process reservations separately to get user information
       const processedReservas = await Promise.all((data || []).map(async (reserva) => {
+        console.log("Processing reservation:", reserva.id, "for user:", reserva.usuario_id);
+        
         let userInfo = { full_name: 'Usuário' };
         
         if (reserva.usuario_id) {
-          const { data: userData } = await supabase
+          const { data: userData, error: userError } = await supabase
             .from("profiles")
             .select("full_name")
             .eq("id", reserva.usuario_id)
             .maybeSingle();
             
+          if (userError) {
+            console.error("Error fetching user profile for reservation:", userError);
+          }
+            
           if (userData) {
             userInfo = { full_name: userData.full_name || 'Usuário' };
+            console.log("Found user info for reservation:", userInfo);
           }
         }
         
@@ -164,6 +180,7 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
         } as ReservaCarona;
       }));
       
+      console.log("Processed reservations with user info:", processedReservas);
       setReservas(processedReservas);
     } catch (error: any) {
       console.error("Erro ao carregar reservas:", error);
@@ -172,6 +189,8 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
         title: "Erro ao carregar reservas",
         description: error.message,
       });
+    } finally {
+      setFetchingReservas(false);
     }
   };
 
@@ -199,21 +218,40 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
   };
 
   const fetchPassengerProfiles = async () => {
+    console.log("Fetching passenger profiles for carona:", carona.id);
     try {
       const confirmedReservations = reservas.filter(r => r.status === "confirmado");
+      console.log("Confirmed reservations:", confirmedReservations);
+      
       if (confirmedReservations.length === 0) {
+        console.log("No confirmed reservations found");
         setPassengerProfiles([]);
         return;
       }
 
-      const passengerIds = confirmedReservations.map(r => r.usuario_id);
+      const passengerIds = confirmedReservations
+        .filter(r => r.usuario_id) // Make sure we have valid user IDs
+        .map(r => r.usuario_id);
+      
+      console.log("Passenger IDs to fetch:", passengerIds);
+      
+      if (passengerIds.length === 0) {
+        console.log("No valid passenger IDs found");
+        setPassengerProfiles([]);
+        return;
+      }
       
       const { data, error } = await supabase
         .from("profiles")
         .select("id, full_name, university")
         .in("id", passengerIds);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching passenger profiles:", error);
+        throw error;
+      }
+      
+      console.log("Fetched passenger profiles:", data);
       
       // Add default email value since it's not in the profiles table
       const processedProfiles = (data || []).map(profile => ({
@@ -221,6 +259,7 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
         email: "usuario@exemplo.com"
       }));
       
+      console.log("Processed passenger profiles:", processedProfiles);
       setPassengerProfiles(processedProfiles);
     } catch (error: any) {
       console.error("Erro ao carregar perfis dos passageiros:", error);
@@ -278,6 +317,8 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
     setLoadingReserva(true);
 
     try {
+      console.log("Attempting to create reservation for carona:", carona.id, "user:", user.id);
+      
       // Check if user already has a reservation
       const { data: existingReservation, error: queryError } = await supabase
         .from("reservas_caronas")
@@ -286,9 +327,13 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
         .eq("usuario_id", user.id)
         .maybeSingle();
 
-      if (queryError) throw queryError;
+      if (queryError) {
+        console.error("Error checking existing reservation:", queryError);
+        throw queryError;
+      }
 
       if (existingReservation) {
+        console.log("User already has a reservation:", existingReservation);
         toast({
           title: "Você já possui uma reserva para esta carona",
         });
@@ -307,11 +352,11 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
         .select();
 
       if (error) {
-        console.error("Erro detalhado ao reservar:", error);
+        console.error("Detailed error when creating reservation:", error);
         throw error;
       }
 
-      console.log("Reserva criada com sucesso:", data);
+      console.log("Reservation created successfully:", data);
 
       if (data && data.length > 0) {
         setUserReservationId(data[0].id);
@@ -329,7 +374,7 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
       fetchReservas();
       onRefresh(); // Refresh parent component data
     } catch (error: any) {
-      console.error("Erro ao reservar carona:", error);
+      console.error("Error creating reservation:", error);
       toast({
         variant: "destructive",
         title: "Erro ao reservar carona",
