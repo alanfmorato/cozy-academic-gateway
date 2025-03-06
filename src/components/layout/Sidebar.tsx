@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useLocation } from "react-router-dom";
 import {
@@ -19,6 +20,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import NavLink from "./NavLink";
+import ThemeToggle from "../ThemeToggle";
 
 interface SidebarProps {
   menuOpen: boolean;
@@ -86,6 +88,9 @@ const Sidebar: React.FC<SidebarProps> = ({ menuOpen, setMenuOpen, closeMenu }) =
         </nav>
 
         <div className="p-4 border-t border-border">
+          <div className="flex justify-center mb-3">
+            <ThemeToggle />
+          </div>
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
               {user.user_metadata.full_name?.[0] || user.email?.[0] || "U"}
