@@ -9,6 +9,44 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      avaliacoes_caronas: {
+        Row: {
+          avaliado_id: string
+          avaliador_id: string
+          carona_id: string
+          comentario: string | null
+          created_at: string
+          id: string
+          nota: number
+        }
+        Insert: {
+          avaliado_id: string
+          avaliador_id: string
+          carona_id: string
+          comentario?: string | null
+          created_at?: string
+          id?: string
+          nota: number
+        }
+        Update: {
+          avaliado_id?: string
+          avaliador_id?: string
+          carona_id?: string
+          comentario?: string | null
+          created_at?: string
+          id?: string
+          nota?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avaliacoes_caronas_carona_id_fkey"
+            columns: ["carona_id"]
+            isOneToOne: false
+            referencedRelation: "caronas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bolsas_auxilios: {
         Row: {
           created_at: string
@@ -46,6 +84,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      caronas: {
+        Row: {
+          created_at: string
+          forma_pagamento: string
+          horario_saida: string
+          id: string
+          local_chegada: string
+          local_saida: string
+          observacoes: string | null
+          qtd_vagas: number
+          status: string
+          updated_at: string
+          usuario_id: string
+          valor_vaga: number
+        }
+        Insert: {
+          created_at?: string
+          forma_pagamento: string
+          horario_saida: string
+          id?: string
+          local_chegada: string
+          local_saida: string
+          observacoes?: string | null
+          qtd_vagas: number
+          status?: string
+          updated_at?: string
+          usuario_id: string
+          valor_vaga: number
+        }
+        Update: {
+          created_at?: string
+          forma_pagamento?: string
+          horario_saida?: string
+          id?: string
+          local_chegada?: string
+          local_saida?: string
+          observacoes?: string | null
+          qtd_vagas?: number
+          status?: string
+          updated_at?: string
+          usuario_id?: string
+          valor_vaga?: number
+        }
+        Relationships: []
       }
       compra_venda: {
         Row: {
@@ -223,6 +306,33 @@ export type Database = {
           },
         ]
       }
+      favoritos_caronas: {
+        Row: {
+          created_at: string
+          id: string
+          motorista_id: string | null
+          rota_destino: string | null
+          rota_origem: string | null
+          usuario_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          motorista_id?: string | null
+          rota_destino?: string | null
+          rota_origem?: string | null
+          usuario_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          motorista_id?: string | null
+          rota_destino?: string | null
+          rota_origem?: string | null
+          usuario_id?: string
+        }
+        Relationships: []
+      }
       materiais: {
         Row: {
           arquivo_url: string | null
@@ -276,6 +386,44 @@ export type Database = {
             columns: ["universidade_id"]
             isOneToOne: false
             referencedRelation: "universidades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mensagens_caronas: {
+        Row: {
+          carona_id: string
+          created_at: string
+          destinatario_id: string
+          id: string
+          lida: boolean
+          mensagem: string
+          remetente_id: string
+        }
+        Insert: {
+          carona_id: string
+          created_at?: string
+          destinatario_id: string
+          id?: string
+          lida?: boolean
+          mensagem: string
+          remetente_id: string
+        }
+        Update: {
+          carona_id?: string
+          created_at?: string
+          destinatario_id?: string
+          id?: string
+          lida?: boolean
+          mensagem?: string
+          remetente_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mensagens_caronas_carona_id_fkey"
+            columns: ["carona_id"]
+            isOneToOne: false
+            referencedRelation: "caronas"
             referencedColumns: ["id"]
           },
         ]
@@ -373,6 +521,41 @@ export type Database = {
             columns: ["universidade_id"]
             isOneToOne: false
             referencedRelation: "universidades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reservas_caronas: {
+        Row: {
+          carona_id: string
+          created_at: string
+          id: string
+          status: string
+          updated_at: string
+          usuario_id: string
+        }
+        Insert: {
+          carona_id: string
+          created_at?: string
+          id?: string
+          status?: string
+          updated_at?: string
+          usuario_id: string
+        }
+        Update: {
+          carona_id?: string
+          created_at?: string
+          id?: string
+          status?: string
+          updated_at?: string
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservas_caronas_carona_id_fkey"
+            columns: ["carona_id"]
+            isOneToOne: false
+            referencedRelation: "caronas"
             referencedColumns: ["id"]
           },
         ]

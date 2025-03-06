@@ -15,6 +15,7 @@ import Marketplace from "./pages/Marketplace";
 import Eventos from "./pages/Eventos";
 import Materiais from "./pages/Materiais";
 import Estagios from "./pages/Estagios";
+import Caronas from "./pages/Caronas";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/eventos" element={<Layout><Eventos /></Layout>} />
             <Route path="/materiais" element={<Layout><Materiais /></Layout>} />
             <Route path="/estagios" element={<Layout><Estagios /></Layout>} />
+            <Route path="/caronas" element={<Layout><Caronas /></Layout>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -9,7 +9,8 @@ import {
   Calendar, 
   FileText, 
   Briefcase, 
-  ArrowRight 
+  ArrowRight,
+  Car
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -77,6 +78,13 @@ const Index = () => {
       icon: <Briefcase className="h-6 w-6" />,
       path: "/estagios",
       color: "from-orange-500/20 to-orange-600/20"
+    },
+    {
+      title: "Caronas",
+      description: "Ofereça ou reserve caronas para a universidade",
+      icon: <Car className="h-6 w-6" />,
+      path: "/caronas",
+      color: "from-indigo-500/20 to-indigo-600/20"
     }
   ];
 
