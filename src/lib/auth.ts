@@ -86,23 +86,39 @@ export const signUp = async ({ email, password, full_name, university, tipo_usua
 export const signOut = async () => {
   try {
     console.log("Attempting to sign out");
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error("Error signing out:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao sair",
-        description: error.message,
-      });
-      return { success: false, error };
-    }
     
-    console.log("Sign out successful");
-    toast({
-      title: "Sessão finalizada",
-      description: "Você saiu da sua conta com sucesso",
-    });
-    return { success: true };
+    // First try to get the current session to avoid the "Auth session missing" error
+    const { data: sessionData } = await supabase.auth.getSession();
+    
+    // Only attempt to sign out if there's an active session
+    if (sessionData && sessionData.session) {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Error signing out:", error);
+        toast({
+          variant: "destructive",
+          title: "Erro ao sair",
+          description: error.message,
+        });
+        return { success: false, error };
+      }
+      
+      console.log("Sign out successful");
+      toast({
+        title: "Sessão finalizada",
+        description: "Você saiu da sua conta com sucesso",
+      });
+      return { success: true };
+    } else {
+      console.log("No active session found, clearing local session state");
+      // If no session exists server-side, we should still notify the user
+      // that they've been logged out (from the client perspective)
+      toast({
+        title: "Sessão finalizada",
+        description: "Você saiu da sua conta com sucesso",
+      });
+      return { success: true };
+    }
   } catch (error: any) {
     console.error("Exception when signing out:", error);
     toast({
