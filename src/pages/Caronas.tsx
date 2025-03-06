@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -76,10 +77,19 @@ const Caronas = () => {
       setCaronas(caronasComUsuarios || []);
 
       if (user) {
-        // Fetch user's caronas
+        // Fetch user's caronas with detailed reservation data
         const { data: userCaronas, error: errorUserCaronas } = await supabase
           .from("caronas")
-          .select("*")
+          .select(`
+            *,
+            reservas_caronas(
+              id,
+              usuario_id,
+              status,
+              created_at,
+              profiles:usuario_id(full_name, email)
+            )
+          `)
           .eq("usuario_id", user.id)
           .order("horario_saida", { ascending: true });
 

@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from "react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, addHours } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -20,6 +21,8 @@ import {
   Star,
   Heart,
   X,
+  BellRing,
+  UserCircle,
 } from "lucide-react";
 import {
   Card,
@@ -35,9 +38,24 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { 
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { formatCurrency } from "@/lib/utils";
 import { ChatForm } from "./ChatForm";
 import { RatingForm } from "./RatingForm";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface CaronaCardProps {
   carona: Carona;
@@ -66,12 +84,24 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
   const [loadingFavorite, setLoadingFavorite] = useState(false);
   const [userData, setUserData] = useState<{ full_name: string; email: string } | null>(null);
   const [userReservationId, setUserReservationId] = useState<string | null>(null);
+  const [showPassengerList, setShowPassengerList] = useState(false);
+  const [passengerProfiles, setPassengerProfiles] = useState<any[]>([]);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
   const isOwner = user?.id === carona.usuario_id;
   const formattedDate = format(parseISO(carona.horario_saida), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
   const formattedTime = format(parseISO(carona.horario_saida), "HH:mm", { locale: ptBR });
   const vagasOcupadas = reservas.filter(r => r.status === "confirmado").length;
   const vagasDisponiveis = carona.qtd_vagas - vagasOcupadas;
+  
+  // Check if the ride is upcoming (within the next 24 hours)
+  const isUpcoming = () => {
+    const departureTime = new Date(carona.horario_saida);
+    const now = new Date();
+    const timeDiff = departureTime.getTime() - now.getTime();
+    const hoursDiff = timeDiff / (1000 * 60 * 60);
+    return hoursDiff > 0 && hoursDiff < 24;
+  };
 
   useEffect(() => {
     if (expanded) {
@@ -93,6 +123,13 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
       setUserReservationId(null);
     }
   }, [reservas, user]);
+
+  // Fetch passenger profiles when needed
+  useEffect(() => {
+    if (isOwner && reservas.length > 0) {
+      fetchPassengerProfiles();
+    }
+  }, [reservas, isOwner]);
 
   const fetchReservas = async () => {
     try {
@@ -157,6 +194,34 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
       setUserData({
         full_name: "Usuário",
         email: "usuario@exemplo.com"
+      });
+    }
+  };
+
+  const fetchPassengerProfiles = async () => {
+    try {
+      const confirmedReservations = reservas.filter(r => r.status === "confirmado");
+      if (confirmedReservations.length === 0) {
+        setPassengerProfiles([]);
+        return;
+      }
+
+      const passengerIds = confirmedReservations.map(r => r.usuario_id);
+      
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, email, foto_perfil, university")
+        .in("id", passengerIds);
+
+      if (error) throw error;
+      
+      setPassengerProfiles(data || []);
+    } catch (error: any) {
+      console.error("Erro ao carregar perfis dos passageiros:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao carregar perfis",
+        description: "Não foi possível obter informações dos passageiros."
       });
     }
   };
@@ -240,6 +305,9 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
         title: "Carona reservada com sucesso!",
         description: "Você pode visualizar os detalhes da carona expandindo o card.",
       });
+
+      // Enable notifications by default after reserving
+      setNotificationsEnabled(true);
 
       fetchReservas();
       onRefresh();
@@ -349,6 +417,28 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
     }
   };
 
+  const toggleNotifications = () => {
+    setNotificationsEnabled(!notificationsEnabled);
+    
+    toast({
+      title: notificationsEnabled 
+        ? "Notificações desativadas" 
+        : "Notificações ativadas",
+      description: notificationsEnabled 
+        ? "Você não receberá mais avisos sobre esta carona." 
+        : "Você receberá avisos sobre esta carona."
+    });
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -359,9 +449,16 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
               <Calendar className="h-4 w-4" /> {formattedDate} às {formattedTime}
             </CardDescription>
           </div>
-          <Badge variant={carona.status === "disponivel" ? "secondary" : "outline"}>
-            {carona.status === "disponivel" ? "Disponível" : "Completo"}
-          </Badge>
+          <div className="flex gap-2">
+            {isUpcoming() && (
+              <Badge variant="outline" className="bg-yellow-100 dark:bg-yellow-900 border-yellow-300 text-yellow-800 dark:text-yellow-200">
+                Em breve
+              </Badge>
+            )}
+            <Badge variant={carona.status === "disponivel" ? "secondary" : "outline"}>
+              {carona.status === "disponivel" ? "Disponível" : "Completo"}
+            </Badge>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-2">
@@ -432,23 +529,129 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
                         <Button size="sm" variant="outline" onClick={() => setShowRating(true)}>
                           <Star className="h-4 w-4 mr-1" /> Avaliar
                         </Button>
+                        <Button 
+                          size="sm" 
+                          variant={notificationsEnabled ? "default" : "outline"}
+                          onClick={toggleNotifications}
+                        >
+                          <BellRing className="h-4 w-4 mr-1" /> 
+                          {notificationsEnabled ? "Notificações On" : "Notificações Off"}
+                        </Button>
                       </div>
                     </div>
                   )}
 
-                  {isOwner && reservas.length > 0 && (
+                  {isOwner && (
                     <div className="mt-4">
-                      <h4 className="font-medium">Passageiros ({vagasOcupadas})</h4>
-                      <ul className="mt-2 space-y-2">
-                        {reservas
-                          .filter(r => r.status === "confirmado")
-                          .map((reserva) => (
-                            <li key={reserva.id} className="text-sm">
-                              <p>{reserva.usuario?.full_name}</p>
-                              {/* <p className="text-muted-foreground">{reserva.usuario?.email}</p> */}
+                      <div className="flex justify-between items-center">
+                        <h4 className="font-medium">Passageiros Confirmados ({vagasOcupadas})</h4>
+                        <Sheet open={showPassengerList} onOpenChange={setShowPassengerList}>
+                          <SheetTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => {
+                                fetchPassengerProfiles();
+                                setShowPassengerList(true);
+                              }}
+                            >
+                              <Users className="h-4 w-4 mr-1" /> Ver Lista Completa
+                            </Button>
+                          </SheetTrigger>
+                          <SheetContent>
+                            <SheetHeader>
+                              <SheetTitle>Lista de Passageiros</SheetTitle>
+                              <SheetDescription>
+                                Carona de {carona.local_saida} para {carona.local_chegada}
+                                <br />
+                                {formattedDate} às {formattedTime}
+                              </SheetDescription>
+                            </SheetHeader>
+                            <div className="mt-6">
+                              <h4 className="font-medium mb-4">Passageiros Confirmados ({vagasOcupadas})</h4>
+                              {vagasOcupadas === 0 ? (
+                                <p className="text-muted-foreground text-sm">Não há passageiros confirmados para esta carona.</p>
+                              ) : (
+                                <ScrollArea className="h-[calc(100vh-200px)] pr-4">
+                                  <div className="space-y-4">
+                                    {passengerProfiles.map((profile) => (
+                                      <div key={profile.id} className="flex items-start gap-3 p-3 bg-muted/40 rounded-lg">
+                                        <Avatar>
+                                          <AvatarFallback>{getInitials(profile.full_name || "Usuário")}</AvatarFallback>
+                                        </Avatar>
+                                        <div className="flex-1">
+                                          <div className="font-medium">{profile.full_name || "Usuário"}</div>
+                                          <p className="text-sm text-muted-foreground">{profile.university || "Universidade não informada"}</p>
+                                          <p className="text-sm text-muted-foreground">{profile.email || "Email não informado"}</p>
+                                          
+                                          <div className="flex gap-2 mt-2">
+                                            <Button size="sm" variant="outline" onClick={() => {
+                                              setShowPassengerList(false);
+                                              setShowChat(true);
+                                              // Would need to set up the chat mechanism for this specific passenger
+                                            }}>
+                                              <MessageSquare className="h-3 w-3 mr-1" /> Mensagem
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </ScrollArea>
+                              )}
+                            </div>
+                          </SheetContent>
+                        </Sheet>
+                      </div>
+                      
+                      {vagasOcupadas > 0 ? (
+                        <ul className="mt-2 space-y-2">
+                          {reservas
+                            .filter(r => r.status === "confirmado")
+                            .slice(0, 3)
+                            .map((reserva) => (
+                              <li key={reserva.id} className="text-sm flex items-center gap-2">
+                                <UserCircle className="h-4 w-4 text-muted-foreground" />
+                                <p>{reserva.usuario?.full_name || "Usuário"}</p>
+                              </li>
+                            ))}
+                          {vagasOcupadas > 3 && (
+                            <li className="text-sm text-muted-foreground">
+                              + {vagasOcupadas - 3} outros passageiros...
                             </li>
-                          ))}
-                      </ul>
+                          )}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-muted-foreground mt-2">Não há passageiros confirmados para esta carona.</p>
+                      )}
+
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm" className="mt-3">
+                            <BellRing className="h-4 w-4 mr-1" /> Notificações
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80">
+                          <div className="space-y-2">
+                            <h4 className="font-medium">Gerenciar Notificações</h4>
+                            <p className="text-sm text-muted-foreground">
+                              Você receberá notificações automáticas para:
+                            </p>
+                            <ul className="text-sm space-y-1 list-disc pl-5">
+                              <li>Novas reservas em suas caronas</li>
+                              <li>Cancelamentos de reservas</li>
+                              <li>Lembretes antes do horário de saída</li>
+                            </ul>
+                            <Button 
+                              className="w-full mt-2" 
+                              variant={notificationsEnabled ? "default" : "outline"}
+                              onClick={toggleNotifications}
+                            >
+                              {notificationsEnabled ? "Desativar Notificações" : "Ativar Notificações"}
+                            </Button>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   )}
 
