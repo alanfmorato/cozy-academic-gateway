@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { format, parseISO, isPast, addHours } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -106,14 +107,16 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
     return isPast(new Date(carona.horario_saida));
   };
 
+  // Fetch reservations immediately on component mount, not just when expanded
   useEffect(() => {
+    fetchReservas();
     if (expanded) {
-      fetchReservas();
       fetchUsuario();
       checkIfFavorited();
     }
   }, [expanded, carona.id, user?.id]);
 
+  // Updated to properly calculate available seats whenever reservations change
   useEffect(() => {
     if (user && reservas.length > 0) {
       const usuarioReserva = reservas.find(
@@ -126,6 +129,7 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
       setUserReservationId(null);
     }
     
+    // Calculate confirmed reservations and available seats
     const confirmedReservations = reservas.filter(r => r.status === "confirmado").length;
     setVagasOcupadas(confirmedReservations);
     setVagasDisponiveis(carona.qtd_vagas - confirmedReservations);
@@ -386,7 +390,8 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
 
       setNotificationsEnabled(true);
 
-      fetchReservas();
+      // Update local state after successful reservation
+      await fetchReservas();
       onRefresh();
     } catch (error: any) {
       console.error("Error creating reservation:", error);
@@ -430,7 +435,8 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
       setIsReserved(false);
       setUserReservationId(null);
       
-      fetchReservas();
+      // Update reservations after cancellation
+      await fetchReservas();
       onRefresh();
     } catch (error: any) {
       console.error("Erro ao cancelar reserva:", error);
@@ -532,8 +538,8 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
                 Em breve
               </Badge>
             )}
-            <Badge variant={carona.status === "disponivel" ? "secondary" : "outline"}>
-              {carona.status === "disponivel" ? "Disponível" : "Completo"}
+            <Badge variant={vagasDisponiveis > 0 ? "secondary" : "outline"}>
+              {vagasDisponiveis > 0 ? "Disponível" : "Completo"}
             </Badge>
           </div>
         </div>
@@ -795,14 +801,13 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
                 onClick={handleReservar}
                 disabled={
                   loadingReserva ||
-                  carona.status === "completo" ||
-                  vagasDisponiveis === 0 ||
+                  vagasDisponiveis <= 0 ||
                   isDeparted()
                 }
               >
                 {isDeparted() 
                   ? "Horário expirado" 
-                  : carona.status === "completo" || vagasDisponiveis === 0
+                  : vagasDisponiveis <= 0
                     ? "Sem vagas"
                     : "Reservar Vaga"}
               </Button>

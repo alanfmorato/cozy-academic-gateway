@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -64,6 +65,32 @@ const Caronas = () => {
         return now < twoHoursAfterDeparture;
       }) : [];
 
+      console.log("Filtered caronas (before processing):", filteredCaronas.length);
+      
+      // Get all reservations for these caronas to properly show available seats
+      const allReservations = await Promise.all(
+        filteredCaronas.map(async (carona) => {
+          const { data: reservations } = await supabase
+            .from("reservas_caronas")
+            .select("*")
+            .eq("carona_id", carona.id)
+            .eq("status", "confirmado");
+            
+          return {
+            caronaId: carona.id,
+            reservations: reservations || []
+          };
+        })
+      );
+      
+      // Create a map of carona IDs to reservation counts
+      const reservationsMap = allReservations.reduce((map, item) => {
+        map[item.caronaId] = item.reservations.length;
+        return map;
+      }, {} as Record<string, number>);
+      
+      console.log("Reservations map:", reservationsMap);
+
       // Fetch user data separately for each carona
       const caronasComUsuarios = await Promise.all(
         filteredCaronas.map(async (carona) => {
@@ -74,15 +101,23 @@ const Caronas = () => {
             .eq("id", carona.usuario_id)
             .single();
           
+          // Calculate available seats
+          const reservedSeats = reservationsMap[carona.id] || 0;
+          const availableSeats = carona.qtd_vagas - reservedSeats;
+          const status = availableSeats > 0 ? "disponivel" : "completo";
+          
           return {
             ...carona,
-            status: (carona.status as "disponivel" | "completo"),
-            usuario: userError ? { full_name: "Usuário", email: "usuario@exemplo.com" } 
-                              : { full_name: userData?.full_name || "Usuário", email: "usuario@exemplo.com" }
+            status: status as "disponivel" | "completo",
+            qtd_vagas_disponiveis: availableSeats,
+            usuario: userError 
+              ? { full_name: "Usuário", email: "usuario@exemplo.com" } 
+              : { full_name: userData?.full_name || "Usuário", email: "usuario@exemplo.com" }
           } as Carona;
         })
       );
       
+      console.log("Processed caronas with user info and correct seat count:", caronasComUsuarios.length);
       setCaronas(caronasComUsuarios || []);
 
       if (user) {
