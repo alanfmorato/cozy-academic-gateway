@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -89,6 +88,9 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
       );
       setIsReserved(!!usuarioReserva);
       setUserReservationId(usuarioReserva?.id || null);
+    } else {
+      setIsReserved(false);
+      setUserReservationId(null);
     }
   }, [reservas, user]);
 
@@ -128,6 +130,11 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
       setReservas(typedReservas);
     } catch (error: any) {
       console.error("Erro ao carregar reservas:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao carregar reservas",
+        description: error.message,
+      });
     }
   };
 
@@ -189,6 +196,14 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
       return;
     }
 
+    if (vagasDisponiveis <= 0) {
+      toast({
+        variant: "destructive",
+        title: "Não há vagas disponíveis para esta carona",
+      });
+      return;
+    }
+
     setLoadingReserva(true);
 
     try {
@@ -209,13 +224,17 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
         return;
       }
 
-      const { error } = await supabase.from("reservas_caronas").insert({
+      const { data, error } = await supabase.from("reservas_caronas").insert({
         carona_id: carona.id,
         usuario_id: user.id,
         status: "confirmado",
-      });
+      }).select();
 
       if (error) throw error;
+
+      if (data && data.length > 0) {
+        setUserReservationId(data[0].id);
+      }
 
       toast({
         title: "Carona reservada com sucesso!",
@@ -237,11 +256,20 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
   };
 
   const handleCancelarReserva = async () => {
-    if (!user || !userReservationId) return;
+    if (!user || !userReservationId) {
+      toast({
+        variant: "destructive",
+        title: "Não foi possível identificar sua reserva",
+        description: "Por favor, tente novamente ou entre em contato com o motorista."
+      });
+      return;
+    }
 
     setLoadingReserva(true);
 
     try {
+      console.log("Cancelando reserva:", userReservationId);
+      
       const { error } = await supabase
         .from("reservas_caronas")
         .delete()
