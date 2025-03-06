@@ -5,6 +5,38 @@
 
 @layer base {
   :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 98%;
+    
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    
+    --radius: 0.75rem;
+  }
+
+  .dark {
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
     
@@ -32,22 +64,30 @@
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
     --ring: 240 4.9% 83.9%;
-    
-    --radius: 0.75rem;
   }
 }
 
 @layer base {
   * {
-    @apply border-border selection:bg-white/10 selection:text-white;
+    @apply border-border selection:bg-primary/10 selection:text-primary;
   }
   
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "ss01", "ss02", "cv01", "cv02", "cv03";
+  }
+
+  .dark body {
     background-image: 
       radial-gradient(circle at 20% 10%, rgba(76, 29, 149, 0.15) 0%, transparent 40%),
       radial-gradient(circle at 80% 90%, rgba(59, 130, 246, 0.1) 0%, transparent 40%);
+    background-attachment: fixed;
+  }
+
+  .light body {
+    background-image: 
+      radial-gradient(circle at 20% 10%, rgba(219, 234, 254, 0.25) 0%, transparent 40%),
+      radial-gradient(circle at 80% 90%, rgba(191, 219, 254, 0.2) 0%, transparent 40%);
     background-attachment: fixed;
   }
 
@@ -70,8 +110,20 @@
     @apply backdrop-blur-xl bg-white/5 border border-white/10 shadow-[0_4px_12px_-2px_rgba(0,0,0,0.3)];
   }
   
+  .dark .glass-morphism {
+    @apply backdrop-blur-xl bg-white/5 border border-white/10 shadow-[0_4px_12px_-2px_rgba(0,0,0,0.3)];
+  }
+
+  .light .glass-morphism {
+    @apply backdrop-blur-xl bg-black/5 border border-black/10 shadow-[0_4px_12px_-2px_rgba(0,0,0,0.1)];
+  }
+  
   .neo-blur {
     @apply backdrop-blur-2xl bg-black/40 border border-white/10;
+  }
+
+  .light .neo-blur {
+    @apply backdrop-blur-2xl bg-white/40 border border-black/10;
   }
   
   .hover-scale {
@@ -79,6 +131,6 @@
   }
   
   .text-gradient {
-    @apply bg-gradient-to-br from-white via-white/90 to-white/70 bg-clip-text text-transparent;
+    @apply bg-gradient-to-br from-foreground via-foreground/90 to-foreground/70 bg-clip-text text-transparent;
   }
 }

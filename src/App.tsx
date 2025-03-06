@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./context/AuthContext";
+import { ThemeProvider } from "./context/ThemeContext";
 import Layout from "./components/Layout";
 import Cursos from "./pages/Cursos";
 import Moradias from "./pages/Moradias";
@@ -22,25 +23,27 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/" element={<Layout><Index /></Layout>} />
-            <Route path="/cursos" element={<Layout><Cursos /></Layout>} />
-            <Route path="/moradias" element={<Layout><Moradias /></Layout>} />
-            <Route path="/marketplace" element={<Layout><Marketplace /></Layout>} />
-            <Route path="/eventos" element={<Layout><Eventos /></Layout>} />
-            <Route path="/materiais" element={<Layout><Materiais /></Layout>} />
-            <Route path="/estagios" element={<Layout><Estagios /></Layout>} />
-            <Route path="/caronas" element={<Layout><Caronas /></Layout>} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
+      <ThemeProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/" element={<Layout><Index /></Layout>} />
+              <Route path="/cursos" element={<Layout><Cursos /></Layout>} />
+              <Route path="/moradias" element={<Layout><Moradias /></Layout>} />
+              <Route path="/marketplace" element={<Layout><Marketplace /></Layout>} />
+              <Route path="/eventos" element={<Layout><Eventos /></Layout>} />
+              <Route path="/materiais" element={<Layout><Materiais /></Layout>} />
+              <Route path="/estagios" element={<Layout><Estagios /></Layout>} />
+              <Route path="/caronas" element={<Layout><Caronas /></Layout>} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </ThemeProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

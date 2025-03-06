@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import Sidebar from "./Sidebar";
 import LoadingScreen from "./LoadingScreen";
 import { toast } from "@/hooks/use-toast";
+import ThemeToggle from "../ThemeToggle";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -99,12 +100,21 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="flex min-h-screen bg-background w-full">
-      <button
-        className="fixed top-4 left-4 z-50 p-2 rounded-full bg-background border border-border md:hidden"
-        onClick={toggleMenu}
-      >
-        {menuOpen ? <X size={20} /> : <Menu size={20} />}
-      </button>
+      <div className="fixed top-4 left-4 z-50 flex items-center gap-2">
+        <button
+          className="p-2 rounded-full bg-background border border-border md:hidden"
+          onClick={toggleMenu}
+        >
+          {menuOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+        <div className="hidden md:block">
+          <ThemeToggle />
+        </div>
+      </div>
+
+      <div className="fixed top-4 right-4 z-50 md:hidden">
+        <ThemeToggle />
+      </div>
 
       <Sidebar 
         menuOpen={menuOpen} 
