@@ -500,7 +500,7 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
             </Button>
           </div>
         ) : (
-          <div>
+          <div className="flex gap-2">
             {isReserved ? (
               <Button
                 size="sm"
