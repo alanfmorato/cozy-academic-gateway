@@ -78,6 +78,7 @@ const Caronas = () => {
 
       if (user) {
         // Fetch user's caronas with detailed reservation data
+        // Fix: Changed the nested select to correctly join profiles
         const { data: userCaronas, error: errorUserCaronas } = await supabase
           .from("caronas")
           .select(`
@@ -86,8 +87,7 @@ const Caronas = () => {
               id,
               usuario_id,
               status,
-              created_at,
-              profiles:usuario_id(full_name, email)
+              created_at
             )
           `)
           .eq("usuario_id", user.id)
@@ -95,7 +95,7 @@ const Caronas = () => {
 
         if (errorUserCaronas) throw errorUserCaronas;
 
-        // Process user's caronas with profile data
+        // Process user's caronas with profile data and fetch passenger profiles separately
         const userCaronasComUsuarios = await Promise.all(
           (userCaronas || []).map(async (carona) => {
             // Get user profile information
@@ -105,13 +105,41 @@ const Caronas = () => {
               .eq("id", carona.usuario_id)
               .single();
             
+            // Process reservations to include passenger profile data
+            let reservasProcessadas = [];
+            if (carona.reservas_caronas && carona.reservas_caronas.length > 0) {
+              reservasProcessadas = await Promise.all(
+                carona.reservas_caronas.map(async (reserva: any) => {
+                  if (!reserva.usuario_id) return reserva;
+                  
+                  const { data: profileData } = await supabase
+                    .from("profiles")
+                    .select("full_name, email")
+                    .eq("id", reserva.usuario_id)
+                    .maybeSingle();
+                  
+                  return {
+                    ...reserva,
+                    usuario: profileData ? {
+                      full_name: profileData.full_name || "Usuário",
+                      email: profileData.email || "usuario@exemplo.com"
+                    } : {
+                      full_name: "Usuário",
+                      email: "usuario@exemplo.com"
+                    }
+                  };
+                })
+              );
+            }
+            
             return {
               ...carona,
               status: (carona.status as "disponivel" | "completo"),
               usuario: { 
-                full_name: userData?.full_name || user.user_metadata.full_name || "Usuário", 
+                full_name: userData?.full_name || user.user_metadata?.full_name || "Usuário", 
                 email: user.email || "usuario@exemplo.com" 
-              }
+              },
+              reservas_caronas: reservasProcessadas
             } as Carona;
           })
         );
