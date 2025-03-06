@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useLocation } from "react-router-dom";
 import {
@@ -10,7 +9,8 @@ import {
   FileText,
   Briefcase,
   LogOut,
-  X
+  X,
+  Car
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
@@ -54,6 +54,7 @@ const Sidebar: React.FC<SidebarProps> = ({ menuOpen, setMenuOpen, closeMenu }) =
     { path: "/eventos", label: "Eventos", icon: <Calendar size={20} /> },
     { path: "/materiais", label: "Materiais", icon: <FileText size={20} /> },
     { path: "/estagios", label: "Estágios", icon: <Briefcase size={20} /> },
+    { path: "/caronas", label: "Caronas", icon: <Car size={20} /> },
   ];
 
   return (

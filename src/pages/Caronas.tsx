@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -50,63 +49,64 @@ const Caronas = () => {
       // Fetch all caronas
       const { data: todasCaronas, error: errorTodasCaronas } = await supabase
         .from("caronas")
-        .select(`
-          *,
-          usuario:profiles(full_name)
-        `)
+        .select("*")
         .order("horario_saida", { ascending: true });
 
       if (errorTodasCaronas) throw errorTodasCaronas;
 
-      // Make sure to handle possible errors with the join
-      const typedData = todasCaronas?.map(item => {
-        // Create a safe usuario object regardless of whether the join succeeded
-        const usuarioNome = typeof item.usuario === 'object' && item.usuario !== null 
-          ? (item.usuario as any).full_name || "Usuário"
-          : "Usuário";
+      // Fetch user data separately for each carona
+      const caronasComUsuarios = await Promise.all(
+        (todasCaronas || []).map(async (carona) => {
+          // Get user profile information
+          const { data: userData, error: userError } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("id", carona.usuario_id)
+            .single();
           
-        return {
-          ...item,
-          status: (item.status as "disponivel" | "completo"),
-          usuario: {
-            full_name: usuarioNome,
-            email: "usuario@exemplo.com" // Placeholder email
-          }
-        };
-      }) as Carona[];
+          return {
+            ...carona,
+            status: (carona.status as "disponivel" | "completo"),
+            usuario: userError ? { full_name: "Usuário", email: "usuario@exemplo.com" } 
+                              : { full_name: userData?.full_name || "Usuário", email: "usuario@exemplo.com" }
+          } as Carona;
+        })
+      );
       
-      setCaronas(typedData || []);
+      setCaronas(caronasComUsuarios || []);
 
       if (user) {
         // Fetch user's caronas
         const { data: userCaronas, error: errorUserCaronas } = await supabase
           .from("caronas")
-          .select(`
-            *,
-            usuario:profiles(full_name)
-          `)
+          .select("*")
           .eq("usuario_id", user.id)
           .order("horario_saida", { ascending: true });
 
         if (errorUserCaronas) throw errorUserCaronas;
 
-        // Cast and normalize the user's caronas
-        const typedUserCaronas = userCaronas?.map(item => {
-          const usuarioNome = typeof item.usuario === 'object' && item.usuario !== null 
-            ? (item.usuario as any).full_name || "Usuário"
-            : "Usuário";
+        // Process user's caronas with profile data
+        const userCaronasComUsuarios = await Promise.all(
+          (userCaronas || []).map(async (carona) => {
+            // Get user profile information
+            const { data: userData } = await supabase
+              .from("profiles")
+              .select("full_name")
+              .eq("id", carona.usuario_id)
+              .single();
             
-          return {
-            ...item,
-            status: (item.status as "disponivel" | "completo"),
-            usuario: {
-              full_name: usuarioNome,
-              email: "usuario@exemplo.com" // Placeholder email
-            }
-          };
-        }) as Carona[];
+            return {
+              ...carona,
+              status: (carona.status as "disponivel" | "completo"),
+              usuario: { 
+                full_name: userData?.full_name || user.user_metadata.full_name || "Usuário", 
+                email: user.email || "usuario@exemplo.com" 
+              }
+            } as Carona;
+          })
+        );
         
-        setMinhasCaronas(typedUserCaronas || []);
+        setMinhasCaronas(userCaronasComUsuarios || []);
 
         // Fetch user's reservations
         const { data: reservasData, error: errorReservas } = await supabase
@@ -122,32 +122,34 @@ const Caronas = () => {
           
           const { data: caronasReservadas, error: errorCaronasReservadas } = await supabase
             .from("caronas")
-            .select(`
-              *,
-              usuario:profiles(full_name)
-            `)
+            .select("*")
             .in("id", caronaIds)
             .order("horario_saida", { ascending: true });
 
           if (errorCaronasReservadas) throw errorCaronasReservadas;
 
-          // Cast and normalize the reservations
-          const typedReservedCaronas = caronasReservadas?.map(item => {
-            const usuarioNome = typeof item.usuario === 'object' && item.usuario !== null 
-              ? (item.usuario as any).full_name || "Usuário"
-              : "Usuário";
+          // Process reserved caronas with profile data
+          const reservasComUsuarios = await Promise.all(
+            (caronasReservadas || []).map(async (carona) => {
+              // Get user profile information
+              const { data: userData } = await supabase
+                .from("profiles")
+                .select("full_name")
+                .eq("id", carona.usuario_id)
+                .single();
               
-            return {
-              ...item,
-              status: (item.status as "disponivel" | "completo"),
-              usuario: {
-                full_name: usuarioNome,
-                email: "usuario@exemplo.com" // Placeholder email
-              }
-            };
-          }) as Carona[];
+              return {
+                ...carona,
+                status: (carona.status as "disponivel" | "completo"),
+                usuario: { 
+                  full_name: userData?.full_name || "Usuário", 
+                  email: "usuario@exemplo.com" 
+                }
+              } as Carona;
+            })
+          );
           
-          setMinhasReservas(typedReservedCaronas || []);
+          setMinhasReservas(reservasComUsuarios || []);
         } else {
           setMinhasReservas([]);
         }
