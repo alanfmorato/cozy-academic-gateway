@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -61,7 +60,6 @@ export const ChatForm: React.FC<ChatFormProps> = ({
         (payload) => {
           const novaMensagem = payload.new as MensagemCarona;
           
-          // Só atualiza se a mensagem é relevante para este chat (entre os mesmos usuários)
           if (
             (novaMensagem.remetente_id === user?.id && novaMensagem.destinatario_id === destinatarioId) ||
             (novaMensagem.remetente_id === destinatarioId && novaMensagem.destinatario_id === user?.id)
@@ -100,22 +98,25 @@ export const ChatForm: React.FC<ChatFormProps> = ({
 
       if (error) throw error;
       
-      // Transform the data to match MensagemCarona type
-      const typedMessages = data?.map(msg => {
-        // Handle possible error from the query by ensuring remetente has full_name
+      const typedMessages: MensagemCarona[] = data?.map(msg => {
         const remetente = typeof msg.remetente === 'object' && msg.remetente !== null 
-          ? { full_name: msg.remetente.full_name || 'Usuário' }
+          ? { full_name: (msg.remetente as any).full_name || 'Usuário' }
           : { full_name: 'Usuário' };
           
         return {
-          ...msg,
+          id: msg.id,
+          carona_id: msg.carona_id,
+          remetente_id: msg.remetente_id,
+          destinatario_id: msg.destinatario_id,
+          mensagem: msg.mensagem,
+          lida: msg.lida,
+          created_at: msg.created_at,
           remetente
-        } as MensagemCarona;
+        };
       }) || [];
       
       setMensagens(typedMessages);
       
-      // Marcar mensagens recebidas como lidas
       const mensagensRecebidas = data?.filter(
         m => m.destinatario_id === user.id && !m.lida
       ) || [];
@@ -193,8 +194,9 @@ export const ChatForm: React.FC<ChatFormProps> = ({
           </div>
         ) : (
           mensagens.map((msg) => {
-            const isOwn = msg.remetente_id === user.id;
+            const isOwn = msg.remetente_id === user?.id;
             const time = format(parseISO(msg.created_at), "HH:mm", { locale: ptBR });
+            const remetenteNome = msg.remetente?.full_name || 'Usuário';
             
             return (
               <div
@@ -210,7 +212,7 @@ export const ChatForm: React.FC<ChatFormProps> = ({
                 >
                   <p className="text-sm">{msg.mensagem}</p>
                   <p className="text-xs text-right mt-1 opacity-70">
-                    {isOwn ? "Você" : msg.remetente?.full_name}, {time}
+                    {isOwn ? "Você" : remetenteNome}, {time}
                   </p>
                 </div>
               </div>

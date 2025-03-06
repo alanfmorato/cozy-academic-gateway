@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { Search, Plus, Filter, Map, Star, Clock, Inbox } from "lucide-react";
+import { Search, Plus, Filter, Map, Star, Clock } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -58,15 +58,22 @@ const Caronas = () => {
 
       if (errorTodasCaronas) throw errorTodasCaronas;
 
-      // Make sure status is the right type and add default email
-      const typedData = todasCaronas?.map(item => ({
-        ...item,
-        status: (item.status as "disponivel" | "completo"),
-        usuario: item.usuario ? {
-          full_name: item.usuario.full_name || "Usuário",
-          email: "usuario@exemplo.com" // Placeholder email
-        } : undefined
-      })) as Carona[];
+      // Make sure to handle possible errors with the join
+      const typedData = todasCaronas?.map(item => {
+        // Create a safe usuario object regardless of whether the join succeeded
+        const usuarioNome = typeof item.usuario === 'object' && item.usuario !== null 
+          ? (item.usuario as any).full_name || "Usuário"
+          : "Usuário";
+          
+        return {
+          ...item,
+          status: (item.status as "disponivel" | "completo"),
+          usuario: {
+            full_name: usuarioNome,
+            email: "usuario@exemplo.com" // Placeholder email
+          }
+        };
+      }) as Carona[];
       
       setCaronas(typedData || []);
 
@@ -83,15 +90,21 @@ const Caronas = () => {
 
         if (errorUserCaronas) throw errorUserCaronas;
 
-        // Cast the status field to the correct type for user's caronas
-        const typedUserCaronas = userCaronas?.map(item => ({
-          ...item,
-          status: (item.status as "disponivel" | "completo"),
-          usuario: item.usuario ? {
-            full_name: item.usuario.full_name || "Usuário",
-            email: "usuario@exemplo.com" // Placeholder email
-          } : undefined
-        })) as Carona[];
+        // Cast and normalize the user's caronas
+        const typedUserCaronas = userCaronas?.map(item => {
+          const usuarioNome = typeof item.usuario === 'object' && item.usuario !== null 
+            ? (item.usuario as any).full_name || "Usuário"
+            : "Usuário";
+            
+          return {
+            ...item,
+            status: (item.status as "disponivel" | "completo"),
+            usuario: {
+              full_name: usuarioNome,
+              email: "usuario@exemplo.com" // Placeholder email
+            }
+          };
+        }) as Carona[];
         
         setMinhasCaronas(typedUserCaronas || []);
 
@@ -118,15 +131,21 @@ const Caronas = () => {
 
           if (errorCaronasReservadas) throw errorCaronasReservadas;
 
-          // Cast the status field to the correct type for user's reservations
-          const typedReservedCaronas = caronasReservadas?.map(item => ({
-            ...item,
-            status: (item.status as "disponivel" | "completo"),
-            usuario: item.usuario ? {
-              full_name: item.usuario.full_name || "Usuário",
-              email: "usuario@exemplo.com" // Placeholder email
-            } : undefined
-          })) as Carona[];
+          // Cast and normalize the reservations
+          const typedReservedCaronas = caronasReservadas?.map(item => {
+            const usuarioNome = typeof item.usuario === 'object' && item.usuario !== null 
+              ? (item.usuario as any).full_name || "Usuário"
+              : "Usuário";
+              
+            return {
+              ...item,
+              status: (item.status as "disponivel" | "completo"),
+              usuario: {
+                full_name: usuarioNome,
+                email: "usuario@exemplo.com" // Placeholder email
+              }
+            };
+          }) as Carona[];
           
           setMinhasReservas(typedReservedCaronas || []);
         } else {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -106,12 +105,23 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
 
       if (error) throw error;
       
-      const typedData = data?.map(item => ({
-        ...item,
-        status: item.status as "confirmado" | "cancelado"
-      })) as ReservaCarona[];
+      const typedReservas: ReservaCarona[] = data?.map(item => {
+        const usuario = typeof item.usuario === 'object' && item.usuario !== null 
+          ? { full_name: item.usuario.full_name || 'Usuário' }
+          : { full_name: 'Usuário' };
+          
+        return {
+          id: item.id,
+          carona_id: item.carona_id,
+          usuario_id: item.usuario_id,
+          status: item.status as "confirmado" | "cancelado",
+          created_at: item.created_at,
+          updated_at: item.updated_at,
+          usuario
+        };
+      }) || [];
       
-      setReservas(typedData || []);
+      setReservas(typedReservas);
     } catch (error: any) {
       console.error("Erro ao carregar reservas:", error);
     }
@@ -127,13 +137,16 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
 
       if (error) throw error;
       
-      // Since profiles doesn't have an email column, we'll use only full_name and provide a placeholder for email
       setUserData({
         full_name: data.full_name || "Usuário",
-        email: "usuario@exemplo.com" // Placeholder since email doesn't exist
+        email: "usuario@exemplo.com"
       });
     } catch (error: any) {
       console.error("Erro ao carregar informações do usuário:", error);
+      setUserData({
+        full_name: "Usuário",
+        email: "usuario@exemplo.com"
+      });
     }
   };
 
