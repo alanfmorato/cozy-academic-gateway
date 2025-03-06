@@ -20,6 +20,10 @@ export const supabase = createClient<Database>(
     // Enable debug logging in development
     global: {
       fetch: (...args) => {
+        // Log all fetch requests in development
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('Supabase fetch:', args[0]);
+        }
         // @ts-ignore
         return fetch(...args);
       }

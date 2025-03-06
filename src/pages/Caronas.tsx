@@ -4,6 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Search, Plus, Filter, Map, Star, Clock } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
+import { isPast, addHours, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Carona } from "@/types/carona";
 import { CaronaForm } from "@/components/caronas/CaronaForm";
@@ -54,9 +55,17 @@ const Caronas = () => {
 
       if (errorTodasCaronas) throw errorTodasCaronas;
 
+      // Filter out caronas that are more than 2 hours past their departure time
+      const now = new Date();
+      const filteredCaronas = todasCaronas ? todasCaronas.filter(carona => {
+        const departureTime = parseISO(carona.horario_saida);
+        const twoHoursAfterDeparture = addHours(departureTime, 2);
+        return now < twoHoursAfterDeparture;
+      }) : [];
+
       // Fetch user data separately for each carona
       const caronasComUsuarios = await Promise.all(
-        (todasCaronas || []).map(async (carona) => {
+        filteredCaronas.map(async (carona) => {
           // Get user profile information
           const { data: userData, error: userError } = await supabase
             .from("profiles")
@@ -76,7 +85,7 @@ const Caronas = () => {
       setCaronas(caronasComUsuarios || []);
 
       if (user) {
-        // Fetch user's caronas
+        // Fetch user's caronas (don't filter by time - show all in "Minhas" tab)
         const { data: userCaronas, error: errorUserCaronas } = await supabase
           .from("caronas")
           .select("*")

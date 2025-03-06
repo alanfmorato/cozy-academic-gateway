@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from "react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isPast, addHours } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -95,13 +94,16 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
   const formattedDate = format(parseISO(carona.horario_saida), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
   const formattedTime = format(parseISO(carona.horario_saida), "HH:mm", { locale: ptBR });
   
-  // Check if the ride is upcoming (within the next 24 hours)
   const isUpcoming = () => {
     const departureTime = new Date(carona.horario_saida);
     const now = new Date();
     const timeDiff = departureTime.getTime() - now.getTime();
     const hoursDiff = timeDiff / (1000 * 60 * 60);
     return hoursDiff > 0 && hoursDiff < 24;
+  };
+
+  const isDeparted = () => {
+    return isPast(new Date(carona.horario_saida));
   };
 
   useEffect(() => {
@@ -124,14 +126,12 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
       setUserReservationId(null);
     }
     
-    // Calculate vagas ocupadas and disponíveis based on confirmed reservations
     const confirmedReservations = reservas.filter(r => r.status === "confirmado").length;
     setVagasOcupadas(confirmedReservations);
     setVagasDisponiveis(carona.qtd_vagas - confirmedReservations);
     
   }, [reservas, user, carona.qtd_vagas]);
 
-  // Fetch passenger profiles whenever reservations change and for the owner
   useEffect(() => {
     if (isOwner && reservas.length > 0) {
       fetchPassengerProfiles();
@@ -144,7 +144,6 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
     console.log("Fetching reservations for carona:", carona.id);
     
     try {
-      // Fetch all reservations for this carona
       const { data: reservaData, error: reservaError } = await supabase
         .from("reservas_caronas")
         .select("*")
@@ -164,11 +163,9 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
         return;
       }
       
-      // Process reservations to include user information
       const processedReservas = await Promise.all(reservaData.map(async (reserva) => {
         console.log("Processing reservation:", reserva);
         
-        // Get user profile information for each reservation
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("full_name")
@@ -218,7 +215,7 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
       
       setUserData({
         full_name: data.full_name || "Usuário",
-        email: "usuario@exemplo.com" // Default email since it's not in profiles
+        email: "usuario@exemplo.com"
       });
     } catch (error: any) {
       console.error("Erro ao carregar informações do usuário:", error);
@@ -232,7 +229,6 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
   const fetchPassengerProfiles = async () => {
     console.log("Fetching passenger profiles for carona:", carona.id);
     try {
-      // Get confirmed reservations only
       const confirmedReservations = reservas.filter(r => r.status === "confirmado");
       console.log("Confirmed reservations:", confirmedReservations);
       
@@ -242,7 +238,6 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
         return;
       }
 
-      // Get passenger IDs from confirmed reservations
       const passengerIds = confirmedReservations.map(r => r.usuario_id);
       console.log("Passenger IDs to fetch:", passengerIds);
       
@@ -252,7 +247,6 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
         return;
       }
       
-      // Fetch profile information for each passenger
       const fetchedProfiles = [];
       
       for (const passengerId of passengerIds) {
@@ -271,7 +265,7 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
           console.log(`Fetched profile for passenger ${passengerId}:`, data);
           fetchedProfiles.push({
             ...data,
-            email: "usuario@exemplo.com" // Default email since it's not in profiles
+            email: "usuario@exemplo.com"
           });
         }
       }
@@ -330,13 +324,20 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
       });
       return;
     }
+    
+    if (isDeparted()) {
+      toast({
+        variant: "destructive",
+        title: "Não é possível reservar uma carona após o horário de saída",
+      });
+      return;
+    }
 
     setLoadingReserva(true);
 
     try {
       console.log("Attempting to create reservation for carona:", carona.id, "user:", user.id);
       
-      // Check if user already has a reservation
       const { data: existingReservation, error: queryError } = await supabase
         .from("reservas_caronas")
         .select("id")
@@ -358,7 +359,6 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
         return;
       }
 
-      // Create the reservation
       const { data, error } = await supabase
         .from("reservas_caronas")
         .insert({
@@ -384,12 +384,10 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
         description: "Você pode visualizar os detalhes da carona expandindo o card.",
       });
 
-      // Enable notifications by default after reserving
       setNotificationsEnabled(true);
 
-      // Refresh the data
       fetchReservas();
-      onRefresh(); // Refresh parent component data
+      onRefresh();
     } catch (error: any) {
       console.error("Error creating reservation:", error);
       toast({
@@ -667,7 +665,6 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
                                             <Button size="sm" variant="outline" onClick={() => {
                                               setShowPassengerList(false);
                                               setShowChat(true);
-                                              // Would need to set up the chat mechanism for this specific passenger
                                             }}>
                                               <MessageSquare className="h-3 w-3 mr-1" /> Mensagem
                                             </Button>
@@ -799,12 +796,15 @@ export const CaronaCard: React.FC<CaronaCardProps> = ({
                 disabled={
                   loadingReserva ||
                   carona.status === "completo" ||
-                  vagasDisponiveis === 0
+                  vagasDisponiveis === 0 ||
+                  isDeparted()
                 }
               >
-                {carona.status === "completo" || vagasDisponiveis === 0
-                  ? "Sem vagas"
-                  : "Reservar Vaga"}
+                {isDeparted() 
+                  ? "Horário expirado" 
+                  : carona.status === "completo" || vagasDisponiveis === 0
+                    ? "Sem vagas"
+                    : "Reservar Vaga"}
               </Button>
             )}
           </div>
