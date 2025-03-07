@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { toast } from "@/hooks/use-toast";
 
 interface EventCardProps {
   id: string;
@@ -39,6 +40,44 @@ const EventCard: React.FC<EventCardProps> = ({
   const formatarData = (isoString: string) => {
     const data = parseISO(isoString);
     return format(data, "dd 'de' MMMM', às 'HH:mm", { locale: ptBR });
+  };
+
+  const handleAddToCalendar = () => {
+    try {
+      const eventDate = parseISO(data_hora);
+      
+      // Calculate end time (default: 2 hours after start time)
+      const endTime = new Date(eventDate);
+      endTime.setHours(endTime.getHours() + 2);
+      
+      // Format dates for Google Calendar
+      const startTimeStr = eventDate.toISOString().replace(/-|:|\.\d+/g, "");
+      const endTimeStr = endTime.toISOString().replace(/-|:|\.\d+/g, "");
+      
+      // Create event details
+      const eventTitle = encodeURIComponent(titulo);
+      const eventDetails = encodeURIComponent(descricao);
+      const eventLocation = localizacao ? encodeURIComponent(localizacao) : "";
+      
+      // Generate calendar URL (Google Calendar format)
+      const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${eventTitle}&dates=${startTimeStr}/${endTimeStr}&details=${eventDetails}&location=${eventLocation}&sf=true&output=xml`;
+      
+      // Open calendar in new tab
+      window.open(googleCalendarUrl, '_blank');
+      
+      toast({
+        title: "Evento adicionado",
+        description: "O evento foi adicionado ao seu calendário",
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Erro ao adicionar evento ao calendário:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível adicionar o evento ao calendário",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -71,7 +110,7 @@ const EventCard: React.FC<EventCardProps> = ({
         </div>
       </CardContent>
       <CardFooter className="pt-2">
-        <Button size="sm" className="w-full">
+        <Button size="sm" className="w-full" onClick={handleAddToCalendar}>
           <Calendar className="mr-2 h-4 w-4" />
           Tenho interesse
         </Button>
