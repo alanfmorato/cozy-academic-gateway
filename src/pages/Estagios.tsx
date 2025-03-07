@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -63,7 +62,13 @@ const Estagios = () => {
         .order("updated_at", { ascending: false });
 
       if (error) throw error;
-      setEstagios(data || []);
+      
+      const processedData = data ? data.map(item => ({
+        ...item,
+        link_inscricao: item.link_inscricao || null
+      })) : [];
+      
+      setEstagios(processedData as Estagio[]);
     } catch (error: any) {
       console.error("Erro ao carregar estágios:", error);
       toast({
@@ -94,12 +99,10 @@ const Estagios = () => {
 
     setFormLoading(true);
     try {
-      // Verificando se o usuário tem uma universidade associada
       if (!user.user_metadata.university || user.user_metadata.university === "explorando") {
         throw new Error("Você precisa estar associado a uma universidade para publicar estágios.");
       }
 
-      // Buscando o ID da universidade do usuário
       const { data: uniData, error: uniError } = await supabase
         .from("universidades")
         .select("id")
