@@ -1,5 +1,6 @@
 
 
+
 export interface Moradia {
   id: string;
   descricao: string;
@@ -43,7 +44,7 @@ export interface Produto {
     sigla: string;
   };
   updated_at: string;
-  whatsapp?: string;
+  whatsapp?: string | null;
   status?: "disponivel" | "vendido";
 }
 
@@ -81,3 +82,19 @@ export interface MaterialFormData {
   arquivo_url: string;
   whatsapp: string;
 }
+
+export interface Estagio {
+  id: string;
+  empresa: string;
+  descricao: string;
+  remuneracao: number | null;
+  requisitos: string | null;
+  universidade_id: string;
+  link_inscricao: string | null;
+  universidade?: {
+    nome: string;
+    sigla: string;
+  };
+  updated_at: string;
+}
+

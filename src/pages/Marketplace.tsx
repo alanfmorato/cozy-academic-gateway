@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -168,6 +169,26 @@ const Marketplace = () => {
   const fetchProdutos = async () => {
     setLoading(true);
     try {
+      // First, check if the compra_venda table exists in the database
+      const { error: tableCheckError } = await supabase
+        .from('compra_venda')
+        .select('id')
+        .limit(1);
+
+      if (tableCheckError) {
+        console.error("Erro ao verificar tabela de produtos:", tableCheckError);
+        setProdutos(produtosDemo);
+        setUsandoDadosDemo(true);
+        
+        toast({
+          variant: "destructive",
+          title: "Erro ao carregar produtos",
+          description: "A tabela de produtos pode não existir no banco de dados. Exibindo dados de demonstração.",
+        });
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("compra_venda")
         .select(`
@@ -184,7 +205,8 @@ const Marketplace = () => {
       } else {
         const typedData = data.map(item => ({
           ...item,
-          status: (item.status as "disponivel" | "vendido" | null) || "disponivel"
+          status: (item.status as "disponivel" | "vendido" | null) || "disponivel",
+          whatsapp: item.whatsapp || null
         }));
         
         setProdutos(typedData);
@@ -227,18 +249,33 @@ const Marketplace = () => {
 
     setFormLoading(true);
     try {
+      // Check if user has a university
+      if (!user.user_metadata.university || user.user_metadata.university === "explorando") {
+        throw new Error("Você precisa estar associado a uma universidade para publicar produtos.");
+      }
+
       const { data: uniData, error: uniError } = await supabase
         .from("universidades")
         .select("id")
         .eq("sigla", user.user_metadata.university)
         .single();
 
-      if (uniError) throw uniError;
+      if (uniError) {
+        if (uniError.code === 'PGRST116') {
+          throw new Error(`Universidade '${user.user_metadata.university}' não encontrada. Por favor, contate o administrador.`);
+        }
+        throw uniError;
+      }
 
       if (isEditing && editingProduto) {
         const { error } = await supabase
           .from("compra_venda")
-          .update(formData)
+          .update({
+            titulo: formData.titulo,
+            descricao: formData.descricao,
+            valor: formData.valor,
+            whatsapp: formData.whatsapp || null
+          })
           .eq("id", editingProduto.id);
 
         if (error) throw error;
@@ -249,16 +286,23 @@ const Marketplace = () => {
         });
       } else {
         const novoProduto = {
-          ...formData,
+          titulo: formData.titulo,
+          descricao: formData.descricao,
+          valor: formData.valor,
+          whatsapp: formData.whatsapp || null,
           usuario_id: user.id,
           universidade_id: uniData.id,
+          status: "disponivel"
         };
 
         const { error } = await supabase
           .from("compra_venda")
           .insert(novoProduto);
 
-        if (error) throw error;
+        if (error) {
+          console.error("Erro detalhado ao publicar produto:", error);
+          throw error;
+        }
 
         toast({
           title: "Produto publicado",
@@ -276,6 +320,7 @@ const Marketplace = () => {
       });
       fetchProdutos();
     } catch (error: any) {
+      console.error("Erro detalhado ao manipular produto:", error);
       toast({
         variant: "destructive",
         title: isEditing ? "Erro ao atualizar produto" : "Erro ao publicar produto",
@@ -373,8 +418,8 @@ const Marketplace = () => {
     let filtered = produtos.filter(produto => {
       const matchesSearch = 
         produto.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        produto.descricao.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        produto.universidade?.nome.toLowerCase().includes(searchTerm.toLowerCase());
+        (produto.descricao && produto.descricao.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (produto.universidade?.nome && produto.universidade.nome.toLowerCase().includes(searchTerm.toLowerCase()));
       
       const matchesUniversidade = 
         !selectedUniversidade || produto.universidade_id === selectedUniversidade;

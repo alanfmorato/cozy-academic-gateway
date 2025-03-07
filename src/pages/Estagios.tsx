@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -63,12 +64,13 @@ const Estagios = () => {
 
       if (error) throw error;
       
-      const processedData = data ? data.map(item => ({
+      // Process data to ensure link_inscricao property exists
+      const processedData = data ? data.map((item: any) => ({
         ...item,
         link_inscricao: item.link_inscricao || null
       })) : [];
       
-      setEstagios(processedData as Estagio[]);
+      setEstagios(processedData);
     } catch (error: any) {
       console.error("Erro ao carregar estágios:", error);
       toast({
