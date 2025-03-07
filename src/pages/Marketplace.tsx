@@ -34,9 +34,13 @@ const Marketplace = () => {
   const fetchProdutos = async () => {
     try {
       setIsLoading(true);
+      // Fix the relationship query - we need to fetch from compra_venda table and join with universidades
       const { data, error } = await supabase
         .from('compra_venda')
-        .select('*, universidade:universidades(nome, sigla)');
+        .select(`
+          *,
+          universidade:universidade_id(nome, sigla)
+        `);
 
       if (error) throw error;
       
