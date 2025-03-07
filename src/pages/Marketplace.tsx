@@ -35,11 +35,27 @@ const Marketplace = () => {
     try {
       setIsLoading(true);
       const { data, error } = await supabase
-        .from('produtos')
+        .from('compra_venda')
         .select('*, universidade:universidades(nome, sigla)');
 
       if (error) throw error;
-      setProdutos(data || []);
+      
+      // Transform the data to match the Produto interface
+      const produtosData = data?.map(item => ({
+        id: item.id,
+        titulo: item.titulo,
+        descricao: item.descricao,
+        valor: item.valor,
+        imagens: item.imagens,
+        usuario_id: item.usuario_id,
+        universidade_id: item.universidade_id,
+        universidade: item.universidade,
+        updated_at: item.updated_at,
+        whatsapp: item.whatsapp,
+        status: item.status,
+      })) || [];
+      
+      setProdutos(produtosData);
     } catch (error: any) {
       toast({
         variant: "destructive",
