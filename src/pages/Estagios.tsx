@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { Search, Briefcase, Building, DollarSign, ListChecks, Plus, LogIn, AlertCircle } from "lucide-react";
+import { Search, Briefcase, Building, DollarSign, ListChecks, Plus, LogIn, AlertCircle, ExternalLink } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ interface Estagio {
   remuneracao: number | null;
   requisitos: string | null;
   universidade_id: string;
+  link_inscricao: string | null;
   universidade?: {
     nome: string;
     sigla: string;
@@ -41,6 +42,7 @@ const Estagios = () => {
     descricao: "",
     remuneracao: "",
     requisitos: "",
+    link_inscricao: "",
   });
   const [formLoading, setFormLoading] = useState(false);
   const [needsLogin, setNeedsLogin] = useState(false);
@@ -116,6 +118,7 @@ const Estagios = () => {
         descricao: formData.descricao,
         remuneracao: formData.remuneracao ? parseFloat(formData.remuneracao) : null,
         requisitos: formData.requisitos || null,
+        link_inscricao: formData.link_inscricao || null,
         universidade_id: uniData.id,
       };
 
@@ -139,6 +142,7 @@ const Estagios = () => {
         descricao: "",
         remuneracao: "",
         requisitos: "",
+        link_inscricao: "",
       });
       fetchEstagios();
     } catch (error: any) {
@@ -270,6 +274,17 @@ const Estagios = () => {
                       rows={3}
                     />
                   </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="link_inscricao">Link para inscrição</Label>
+                    <Input
+                      id="link_inscricao"
+                      name="link_inscricao"
+                      type="url"
+                      placeholder="https://exemplo.com/inscricao (opcional)"
+                      value={formData.link_inscricao}
+                      onChange={handleInputChange}
+                    />
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>
@@ -376,10 +391,24 @@ const Estagios = () => {
                 )}
               </CardContent>
               <CardFooter className="pt-2">
-                <Button size="sm" className="w-full">
-                  <Briefcase className="mr-2 h-4 w-4" />
-                  Candidatar-se
-                </Button>
+                {estagio.link_inscricao ? (
+                  <a 
+                    href={estagio.link_inscricao} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="w-full"
+                  >
+                    <Button size="sm" className="w-full">
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      Inscrever-se
+                    </Button>
+                  </a>
+                ) : (
+                  <Button size="sm" className="w-full">
+                    <Briefcase className="mr-2 h-4 w-4" />
+                    Candidatar-se
+                  </Button>
+                )}
               </CardFooter>
             </Card>
           ))}

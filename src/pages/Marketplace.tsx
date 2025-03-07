@@ -20,6 +20,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { Produto } from "@/types/moradia";
 
 interface Universidade {
@@ -118,6 +124,7 @@ const Marketplace = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [soldDialogOpen, setSoldDialogOpen] = useState(false);
   const [currentProduto, setCurrentProduto] = useState<Produto | null>(null);
+  const [activeTab, setActiveTab] = useState("todos");
 
   useEffect(() => {
     fetchProdutos();
@@ -362,17 +369,37 @@ const Marketplace = () => {
     window.open(whatsappUrl, "_blank");
   };
 
-  const filteredProdutos = produtos.filter(produto => {
-    const matchesSearch = 
-      produto.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      produto.descricao.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      produto.universidade?.nome.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesUniversidade = 
-      !selectedUniversidade || produto.universidade_id === selectedUniversidade;
-    
-    return matchesSearch && matchesUniversidade;
-  });
+  const getFilteredProdutos = () => {
+    let filtered = produtos.filter(produto => {
+      const matchesSearch = 
+        produto.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        produto.descricao.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        produto.universidade?.nome.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesUniversidade = 
+        !selectedUniversidade || produto.universidade_id === selectedUniversidade;
+      
+      return matchesSearch && matchesUniversidade;
+    });
+
+    if (activeTab === "meus" && user) {
+      filtered = filtered.filter(produto => 
+        produto.usuario_id === user.id && 
+        produto.status !== "vendido"
+      );
+    } else if (activeTab === "vendidos" && user) {
+      filtered = filtered.filter(produto => 
+        produto.usuario_id === user.id && 
+        produto.status === "vendido"
+      );
+    } else if (activeTab === "todos") {
+      filtered = filtered.filter(produto => produto.status !== "vendido");
+    }
+
+    return filtered;
+  };
+
+  const filteredProdutos = getFilteredProdutos();
 
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', {
@@ -492,160 +519,77 @@ const Marketplace = () => {
         </Alert>
       )}
 
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar produtos..."
-            className="pl-10"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      <Tabs 
+        defaultValue="todos" 
+        value={activeTab} 
+        onValueChange={setActiveTab}
+        className="w-full"
+      >
+        <div className="flex flex-col sm:flex-row gap-4 mb-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar produtos..."
+              className="pl-10"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="w-full sm:w-64">
+            <Select 
+              value={selectedUniversidade} 
+              onValueChange={setSelectedUniversidade}
+            >
+              <SelectTrigger>
+                <div className="flex items-center">
+                  <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <SelectValue placeholder="Universidade" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Todas as universidades</SelectItem>
+                {universidades.map((uni) => (
+                  <SelectItem key={uni.id} value={uni.id}>
+                    {uni.sigla} - {uni.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <div className="w-full sm:w-64">
-          <Select 
-            value={selectedUniversidade} 
-            onValueChange={setSelectedUniversidade}
-          >
-            <SelectTrigger>
-              <div className="flex items-center">
-                <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
-                <SelectValue placeholder="Universidade" />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as universidades</SelectItem>
-              {universidades.map((uni) => (
-                <SelectItem key={uni.id} value={uni.id}>
-                  {uni.sigla} - {uni.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
 
-      {loading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="border border-border/40 backdrop-blur-sm bg-card/30">
-              <CardHeader>
-                <Skeleton className="h-6 w-3/4" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-4 w-full mb-2" />
-                <Skeleton className="h-4 w-3/4" />
-              </CardContent>
-              <CardFooter>
-                <Skeleton className="h-10 w-24" />
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      ) : filteredProdutos.length === 0 ? (
-        <div className="text-center py-12">
-          <ShoppingCart className="mx-auto h-12 w-12 text-muted-foreground opacity-50" />
-          <h3 className="mt-4 text-lg font-medium">Nenhum produto encontrado</h3>
-          <p className="mt-2 text-muted-foreground">
-            {searchTerm || selectedUniversidade ? (
-              "Nenhum produto corresponde aos filtros aplicados. Tente outros termos ou filtros."
-            ) : (
-              "Seja o primeiro a publicar um produto ou ajuste sua busca."
-            )}
-          </p>
-        </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredProdutos.map((produto) => {
-            const isOwner = user && user.id === produto.usuario_id && !usandoDadosDemo;
-            const statusBadge = produto.status === "vendido" ? (
-              <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 ml-1">
-                Vendido
-              </Badge>
-            ) : null;
+        <TabsList className="grid grid-cols-3 mb-6">
+          <TabsTrigger value="todos">Anúncios</TabsTrigger>
+          {user && (
+            <>
+              <TabsTrigger value="meus">Meus Anúncios</TabsTrigger>
+              <TabsTrigger value="vendidos">Vendidos</TabsTrigger>
+            </>
+          )}
+          {!user && (
+            <>
+              <TabsTrigger value="meus" disabled>Meus Anúncios</TabsTrigger>
+              <TabsTrigger value="vendidos" disabled>Vendidos</TabsTrigger>
+            </>
+          )}
+        </TabsList>
+
+        <TabsContent value="todos" className="mt-0">
+          {renderProductsList(filteredProdutos, false)}
+        </TabsContent>
+
+        {user && (
+          <>
+            <TabsContent value="meus" className="mt-0">
+              {renderProductsList(filteredProdutos, true)}
+            </TabsContent>
             
-            return (
-              <Card 
-                key={produto.id} 
-                className={`border border-border/40 backdrop-blur-sm bg-card/30 overflow-hidden hover:shadow-md transition-all ${usandoDadosDemo ? 'ring-1 ring-amber-500/30' : ''} ${produto.status === "vendido" ? "opacity-70" : ""}`}
-              >
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <h3 className="font-semibold">{produto.titulo}</h3>
-                    <div className="flex items-center">
-                      {statusBadge}
-                      <Badge variant="outline">{formatCurrency(produto.valor)}</Badge>
-                    </div>
-                  </div>
-                  <div className="flex items-center text-xs text-muted-foreground mt-1">
-                    <Building className="mr-1 h-3 w-3" />
-                    <span>{produto.universidade?.sigla || "UNIVERSIDADE"}</span>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground line-clamp-3">{produto.descricao}</p>
-                </CardContent>
-                <CardFooter className={isOwner ? "flex-col gap-2" : "pt-2"}>
-                  {isOwner ? (
-                    <>
-                      <div className="flex w-full gap-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="flex-1"
-                          onClick={() => {
-                            setEditingProduto(produto);
-                            setFormOpen(true);
-                          }}
-                        >
-                          <Edit className="mr-2 h-4 w-4" />
-                          Editar
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="destructive" 
-                          className="flex-1"
-                          onClick={() => {
-                            setCurrentProduto(produto);
-                            setDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash className="mr-2 h-4 w-4" />
-                          Excluir
-                        </Button>
-                      </div>
-                      {produto.status !== "vendido" && (
-                        <Button 
-                          size="sm" 
-                          variant="default" 
-                          className="w-full bg-green-600 hover:bg-green-700"
-                          onClick={() => {
-                            setCurrentProduto(produto);
-                            setSoldDialogOpen(true);
-                          }}
-                        >
-                          <Check className="mr-2 h-4 w-4" />
-                          Marcar como vendido
-                        </Button>
-                      )}
-                    </>
-                  ) : (
-                    <Button 
-                      size="sm" 
-                      className="w-full"
-                      onClick={() => handleInteresse(produto)}
-                      disabled={produto.status === "vendido"}
-                    >
-                      <Phone className="mr-2 h-4 w-4" />
-                      Entrar em contato
-                    </Button>
-                  )}
-                </CardFooter>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+            <TabsContent value="vendidos" className="mt-0">
+              {renderProductsList(filteredProdutos, true)}
+            </TabsContent>
+          </>
+        )}
+      </Tabs>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
@@ -679,6 +623,142 @@ const Marketplace = () => {
       </AlertDialog>
     </div>
   );
+
+  function renderProductsList(products: Produto[], isOwnerList: boolean) {
+    if (loading) {
+      return (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="border border-border/40 backdrop-blur-sm bg-card/30">
+              <CardHeader>
+                <Skeleton className="h-6 w-3/4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-3/4" />
+              </CardContent>
+              <CardFooter>
+                <Skeleton className="h-10 w-24" />
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      );
+    }
+    
+    if (products.length === 0) {
+      return (
+        <div className="text-center py-12">
+          <ShoppingCart className="mx-auto h-12 w-12 text-muted-foreground opacity-50" />
+          <h3 className="mt-4 text-lg font-medium">Nenhum produto encontrado</h3>
+          <p className="mt-2 text-muted-foreground">
+            {activeTab === "meus" ? (
+              "Você ainda não publicou nenhum produto."
+            ) : activeTab === "vendidos" ? (
+              "Você ainda não vendeu nenhum produto."
+            ) : searchTerm || selectedUniversidade ? (
+              "Nenhum produto corresponde aos filtros aplicados. Tente outros termos ou filtros."
+            ) : (
+              "Seja o primeiro a publicar um produto ou ajuste sua busca."
+            )}
+          </p>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {products.map((produto) => {
+          const isOwner = user && user.id === produto.usuario_id && !usandoDadosDemo;
+          const statusBadge = produto.status === "vendido" ? (
+            <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 ml-1">
+              Vendido
+            </Badge>
+          ) : null;
+          
+          return (
+            <Card 
+              key={produto.id} 
+              className={`border border-border/40 backdrop-blur-sm bg-card/30 overflow-hidden hover:shadow-md transition-all ${usandoDadosDemo ? 'ring-1 ring-amber-500/30' : ''} ${produto.status === "vendido" ? "opacity-70" : ""}`}
+            >
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-start">
+                  <h3 className="font-semibold">{produto.titulo}</h3>
+                  <div className="flex items-center">
+                    {statusBadge}
+                    <Badge variant="outline">{formatCurrency(produto.valor)}</Badge>
+                  </div>
+                </div>
+                <div className="flex items-center text-xs text-muted-foreground mt-1">
+                  <Building className="mr-1 h-3 w-3" />
+                  <span>{produto.universidade?.sigla || "UNIVERSIDADE"}</span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground line-clamp-3">{produto.descricao}</p>
+              </CardContent>
+              <CardFooter className={isOwner ? "flex-col gap-2" : "pt-2"}>
+                {isOwner ? (
+                  <>
+                    <div className="flex w-full gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex-1"
+                        onClick={() => {
+                          setEditingProduto(produto);
+                          setFormOpen(true);
+                        }}
+                      >
+                        <Edit className="mr-2 h-4 w-4" />
+                        Editar
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="destructive" 
+                        className="flex-1"
+                        onClick={() => {
+                          setCurrentProduto(produto);
+                          setDeleteDialogOpen(true);
+                        }}
+                      >
+                        <Trash className="mr-2 h-4 w-4" />
+                        Excluir
+                      </Button>
+                    </div>
+                    {produto.status !== "vendido" && (
+                      <Button 
+                        size="sm" 
+                        variant="success" 
+                        className="w-full"
+                        onClick={() => {
+                          setCurrentProduto(produto);
+                          setSoldDialogOpen(true);
+                        }}
+                      >
+                        <Check className="mr-2 h-4 w-4" />
+                        Marcar como vendido
+                      </Button>
+                    )}
+                  </>
+                ) : (
+                  <Button 
+                    size="sm" 
+                    className="w-full"
+                    onClick={() => handleInteresse(produto)}
+                    disabled={produto.status === "vendido"}
+                  >
+                    <Phone className="mr-2 h-4 w-4" />
+                    Entrar em contato
+                  </Button>
+                )}
+              </CardFooter>
+            </Card>
+          );
+        })}
+      </div>
+    );
+  }
 };
 
 export default Marketplace;
