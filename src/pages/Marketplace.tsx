@@ -56,7 +56,8 @@ const Marketplace = () => {
         universidade: item.universidade,
         updated_at: item.updated_at,
         whatsapp: item.whatsapp,
-        status: item.status,
+        // Explicitly cast status to the expected type in the Produto interface
+        status: (item.status as "disponivel" | "vendido") || "disponivel"
       })) || [];
       
       setProdutos(produtosData);
