@@ -11,6 +11,9 @@ import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import Layout from "./components/Layout";
 import Cursos from "./pages/Cursos";
+import CursoNovo from "./pages/CursoNovo";
+import CursoDetalhe from "./pages/CursoDetalhe";
+import CursoAssistir from "./pages/CursoAssistir";
 import Moradias from "./pages/Moradias";
 import Marketplace from "./pages/Marketplace";
 import Eventos from "./pages/Eventos";
@@ -32,6 +35,9 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/" element={<Layout><Index /></Layout>} />
               <Route path="/cursos" element={<Layout><Cursos /></Layout>} />
+              <Route path="/cursos/novo" element={<Layout><CursoNovo /></Layout>} />
+              <Route path="/cursos/:id" element={<Layout><CursoDetalhe /></Layout>} />
+              <Route path="/cursos/:id/assistir" element={<Layout><CursoAssistir /></Layout>} />
               <Route path="/moradias" element={<Layout><Moradias /></Layout>} />
               <Route path="/marketplace" element={<Layout><Marketplace /></Layout>} />
               <Route path="/eventos" element={<Layout><Eventos /></Layout>} />

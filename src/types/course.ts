@@ -75,12 +75,11 @@ export interface CourseReview {
   updated_at: string;
 }
 
-export interface CourseWithDetails extends Omit<Course, 'thumbnail_url'> {
+export interface CourseWithDetails extends Course {
   category?: CourseCategory;
   modules?: CourseModule[];
   materials?: CourseMaterial[];
   average_rating?: number;
   total_students?: number;
   is_enrolled?: boolean;
-  thumbnail_url: string | null;
 }
