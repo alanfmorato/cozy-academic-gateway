@@ -1,5 +1,4 @@
 
-// Update this file to properly handle module.lessons
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCourse } from '@/hooks/useCourses';
@@ -79,7 +78,6 @@ const CursoAssistir = () => {
         <div className="lg:col-span-2">
           {currentLesson ? (
             <CourseVideoPlayer
-              title={currentLesson.title}
               videoUrl={currentLesson.video_url || ''}
             />
           ) : (
@@ -99,8 +97,6 @@ const CursoAssistir = () => {
         <div>
           <CourseContent
             course={course as CourseWithDetails}
-            currentModuleId={currentModule?.id}
-            currentLessonId={currentLesson?.id}
             onLessonSelect={handleLessonSelect}
           />
         </div>

@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Course, CourseCategory, CourseModule, CourseLesson, CourseMaterial } from '@/types/course';
@@ -174,7 +175,8 @@ export const useCourse = (courseId: string | undefined) => {
         materials: materials || [],
         average_rating: rating,
         total_students: count || 0,
-        is_enrolled: isEnrolled
+        is_enrolled: isEnrolled,
+        thumbnail_url: data.thumbnail_url
       };
     },
     enabled: !!courseId,
