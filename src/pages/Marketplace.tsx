@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
@@ -17,7 +16,8 @@ import { Produto } from '@/types/moradia';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import ProdutoForm from '@/components/marketplace/ProdutoForm';
-import { Plus } from 'lucide-react';
+import ProdutoActions from '@/components/marketplace/ProdutoActions';
+import { Plus, PackageCheck } from 'lucide-react';
 
 const Marketplace = () => {
   const [produtos, setProdutos] = useState<Produto[]>([]);
@@ -27,6 +27,7 @@ const Marketplace = () => {
   const [universidades, setUniversidades] = useState<{id: string, nome: string}[]>([]);
   const [activeTab, setActiveTab] = useState("todos");
   const [showForm, setShowForm] = useState(false);
+  const [editingProduto, setEditingProduto] = useState<Produto | undefined>(undefined);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -129,7 +130,13 @@ const Marketplace = () => {
 
   const handleFormSuccess = () => {
     setShowForm(false);
+    setEditingProduto(undefined);
     fetchProdutos();
+  };
+
+  const handleEditProduto = (produto: Produto) => {
+    setEditingProduto(produto);
+    setShowForm(true);
   };
 
   return (
@@ -152,7 +159,11 @@ const Marketplace = () => {
           <ProdutoForm 
             universidades={universidades} 
             onSuccess={handleFormSuccess} 
-            onCancel={() => setShowForm(false)} 
+            onCancel={() => {
+              setShowForm(false);
+              setEditingProduto(undefined);
+            }}
+            editingProduto={editingProduto}
           />
         </div>
       ) : (
@@ -199,15 +210,28 @@ const Marketplace = () => {
               <p>Carregando produtos...</p>
             ) : getFilteredProdutos().length > 0 ? (
               getFilteredProdutos().map(produto => (
-                <Card key={produto.id} className="overflow-hidden">
+                <Card key={produto.id} className="overflow-hidden hover:shadow-md transition-shadow">
                   <CardContent className="p-4">
+                    {produto.status === "vendido" && (
+                      <div className="absolute top-2 right-2 bg-green-600 text-white px-2 py-1 rounded-md flex items-center text-xs">
+                        <PackageCheck className="mr-1 h-3 w-3" />
+                        Vendido
+                      </div>
+                    )}
                     <h3 className="font-semibold text-lg">{produto.titulo}</h3>
                     <p className="text-gray-500 text-sm">
                       {produto.universidade?.nome || "Universidade não especificada"}
                     </p>
                     <p className="my-2">{produto.descricao}</p>
                     <p className="font-bold text-lg">R$ {produto.valor.toFixed(2)}</p>
-                    {produto.whatsapp && (
+                    
+                    {user && produto.usuario_id === user.id ? (
+                      <ProdutoActions 
+                        produto={produto} 
+                        onEdit={() => handleEditProduto(produto)}
+                        onStatusChange={fetchProdutos}
+                      />
+                    ) : produto.status !== "vendido" && produto.whatsapp && (
                       <Button
                         variant="outline"
                         className="mt-4 w-full"

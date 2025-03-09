@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,14 +9,21 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
+import { Produto } from '@/types/moradia';
 
 interface ProdutoFormProps {
   universidades: {id: string, nome: string}[];
   onSuccess: () => void;
   onCancel: () => void;
+  editingProduto?: Produto;
 }
 
-const ProdutoForm: React.FC<ProdutoFormProps> = ({ universidades, onSuccess, onCancel }) => {
+const ProdutoForm: React.FC<ProdutoFormProps> = ({ 
+  universidades, 
+  onSuccess, 
+  onCancel,
+  editingProduto 
+}) => {
   const { user } = useAuth();
   const [formData, setFormData] = useState({
     titulo: '',
@@ -26,6 +33,19 @@ const ProdutoForm: React.FC<ProdutoFormProps> = ({ universidades, onSuccess, onC
     whatsapp: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Initialize form with editing product data if available
+  useEffect(() => {
+    if (editingProduto) {
+      setFormData({
+        titulo: editingProduto.titulo,
+        descricao: editingProduto.descricao,
+        valor: editingProduto.valor.toString(),
+        universidade_id: editingProduto.universidade_id,
+        whatsapp: editingProduto.whatsapp || ''
+      });
+    }
+  }, [editingProduto]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -62,35 +82,55 @@ const ProdutoForm: React.FC<ProdutoFormProps> = ({ universidades, onSuccess, onC
         throw new Error('O valor precisa ser um número positivo.');
       }
 
-      // Insert the new product
-      const { data, error } = await supabase
-        .from('compra_venda')
-        .insert({
-          titulo: formData.titulo,
-          descricao: formData.descricao,
-          valor: valor,
-          universidade_id: formData.universidade_id,
-          usuario_id: user.id,
-          whatsapp: formData.whatsapp || null,
-          status: 'disponivel'
-        })
-        .select();
+      const produtoData = {
+        titulo: formData.titulo,
+        descricao: formData.descricao,
+        valor: valor,
+        universidade_id: formData.universidade_id,
+        whatsapp: formData.whatsapp || null,
+        status: 'disponivel' as const
+      };
 
-      if (error) throw error;
+      let result;
 
-      toast({
-        title: "Sucesso!",
-        description: "Produto cadastrado com sucesso.",
-      });
+      if (editingProduto) {
+        // Update existing product
+        result = await supabase
+          .from('compra_venda')
+          .update(produtoData)
+          .eq('id', editingProduto.id)
+          .select();
+          
+        toast({
+          title: "Sucesso!",
+          description: "Produto atualizado com sucesso.",
+        });
+      } else {
+        // Insert new product
+        result = await supabase
+          .from('compra_venda')
+          .insert({
+            ...produtoData,
+            usuario_id: user.id,
+          })
+          .select();
+          
+        toast({
+          title: "Sucesso!",
+          description: "Produto cadastrado com sucesso.",
+        });
+      }
+
+      if (result.error) throw result.error;
       
       onSuccess();
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Erro ao cadastrar produto",
+        title: editingProduto ? "Erro ao atualizar produto" : "Erro ao cadastrar produto",
         description: error.message,
       });
-      console.error('Erro ao cadastrar produto:', error);
+      console.error('Erro ao processar produto:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -99,7 +139,7 @@ const ProdutoForm: React.FC<ProdutoFormProps> = ({ universidades, onSuccess, onC
   return (
     <Card className="w-full max-w-lg mx-auto">
       <CardHeader>
-        <CardTitle>Cadastrar Novo Produto</CardTitle>
+        <CardTitle>{editingProduto ? 'Editar Produto' : 'Cadastrar Novo Produto'}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -172,7 +212,9 @@ const ProdutoForm: React.FC<ProdutoFormProps> = ({ universidades, onSuccess, onC
               Cancelar
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Cadastrando...' : 'Cadastrar Produto'}
+              {isSubmitting 
+                ? (editingProduto ? 'Atualizando...' : 'Cadastrando...') 
+                : (editingProduto ? 'Atualizar Produto' : 'Cadastrar Produto')}
             </Button>
           </div>
         </form>
