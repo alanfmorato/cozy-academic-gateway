@@ -2,19 +2,21 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, Video, CheckCircle, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { CourseWithDetails, CourseLesson } from '@/types/course';
+import { CourseWithDetails, CourseLesson, CourseModule } from '@/types/course';
 import { cn } from '@/lib/utils';
 
 interface CourseContentProps {
   course: CourseWithDetails;
-  onSelectLesson: (lessonId: string) => void;
-  currentLessonId: string | null;
+  currentModuleId: string | undefined;
+  currentLessonId: string | undefined;
+  onLessonSelect: (module: CourseModule, lesson: CourseLesson) => void;
 }
 
 const CourseContent: React.FC<CourseContentProps> = ({
   course,
-  onSelectLesson,
+  currentModuleId,
   currentLessonId,
+  onLessonSelect,
 }) => {
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
 
@@ -30,12 +32,12 @@ const CourseContent: React.FC<CourseContentProps> = ({
     if (!currentLessonId && course.modules && course.modules.length > 0) {
       const firstModule = course.modules[0];
       if (firstModule.lessons && firstModule.lessons.length > 0) {
-        onSelectLesson(firstModule.lessons[0].id);
+        onLessonSelect(firstModule, firstModule.lessons[0]);
         // Auto-expand the first module
         setExpandedModules({ [firstModule.id]: true });
       }
     }
-  }, [course, currentLessonId, onSelectLesson]);
+  }, [course, currentLessonId, onLessonSelect]);
 
   return (
     <div className="h-full overflow-y-auto border-r border-border">
@@ -74,7 +76,7 @@ const CourseContent: React.FC<CourseContentProps> = ({
                         ? "bg-primary/10 text-primary"
                         : "hover:bg-accent"
                     )}
-                    onClick={() => onSelectLesson(lesson.id)}
+                    onClick={() => onLessonSelect(module, lesson)}
                   >
                     <div className="flex-none">
                       {currentLessonId === lesson.id ? (
