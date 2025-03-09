@@ -31,7 +31,7 @@ const CursoNovo = () => {
     <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold mb-6">Criar novo curso</h1>
       <div className="bg-card rounded-lg shadow-sm p-6">
-        <CourseForm onSubmit={handleCreateCourse} isLoading={createCourse.isPending} />
+        <CourseForm onSubmit={handleCreateCourse} isSubmitting={createCourse.isPending} />
       </div>
     </div>
   );
