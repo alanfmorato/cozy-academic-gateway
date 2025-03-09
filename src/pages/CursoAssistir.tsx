@@ -78,7 +78,8 @@ const CursoAssistir = () => {
         <div className="lg:col-span-2">
           {currentLesson ? (
             <CourseVideoPlayer
-              url={currentLesson.video_url || ''}
+              title={currentLesson.title}
+              videoUrl={currentLesson.video_url || ''}
             />
           ) : (
             <div className="aspect-video bg-muted rounded-md flex items-center justify-center">
@@ -97,9 +98,9 @@ const CursoAssistir = () => {
         <div>
           <CourseContent
             course={course as CourseWithDetails}
-            activeModuleId={currentModule?.id}
-            activeLessonId={currentLesson?.id}
-            handleLessonSelect={handleLessonSelect}
+            currentModuleId={currentModule?.id}
+            currentLessonId={currentLesson?.id}
+            onLessonSelect={handleLessonSelect}
           />
         </div>
       </div>

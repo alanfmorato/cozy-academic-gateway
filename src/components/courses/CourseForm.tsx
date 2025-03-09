@@ -48,6 +48,7 @@ const formSchema = z.object({
   price: z.coerce.number().min(0, {
     message: 'O preço não pode ser negativo',
   }),
+  thumbnail_url: z.string().nullable().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
