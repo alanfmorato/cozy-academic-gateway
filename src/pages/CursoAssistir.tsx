@@ -1,73 +1,109 @@
 
-import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
+// Update this file to properly handle module.lessons
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useCourse } from '@/hooks/useCourses';
-import CourseContent from '@/components/courses/CourseContent';
 import CourseVideoPlayer from '@/components/courses/CourseVideoPlayer';
-import { useNavigate } from 'react-router-dom';
+import CourseContent from '@/components/courses/CourseContent';
+import { ChevronLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { CourseWithDetails, CourseLesson, CourseModule } from '@/types/course';
 
 const CursoAssistir = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id, moduleId, lessonId } = useParams();
   const navigate = useNavigate();
   const { data: course, isLoading } = useCourse(id);
-  const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
+  const [currentModule, setCurrentModule] = useState<CourseModule | null>(null);
+  const [currentLesson, setCurrentLesson] = useState<CourseLesson | null>(null);
 
-  const findLesson = () => {
-    if (!course || !currentLessonId) return null;
-    
-    for (const module of course.modules || []) {
-      for (const lesson of module.lessons || []) {
-        if (lesson.id === currentLessonId) {
-          return lesson;
-        }
+  useEffect(() => {
+    if (course && course.modules) {
+      const module = course.modules.find(m => m.id === moduleId) || course.modules[0];
+      setCurrentModule(module);
+      
+      if (module && module.lessons && module.lessons.length > 0) {
+        const lesson = lessonId ? module.lessons.find(l => l.id === lessonId) : module.lessons[0];
+        setCurrentLesson(lesson || module.lessons[0]);
       }
     }
-    return null;
-  };
+  }, [course, moduleId, lessonId]);
 
-  const currentLesson = findLesson();
+  const handleLessonSelect = (module: CourseModule, lesson: CourseLesson) => {
+    setCurrentModule(module);
+    setCurrentLesson(lesson);
+    navigate(`/cursos/${id}/assistir/${module.id}/${lesson.id}`);
+  };
 
   if (isLoading) {
     return (
-      <div className="flex h-[calc(100vh-64px)] animate-pulse">
-        <div className="w-80 bg-muted"></div>
-        <div className="flex-1 bg-muted-foreground/5"></div>
+      <div className="container mx-auto py-8">
+        <Skeleton className="h-8 w-48 mb-4" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2">
+            <Skeleton className="w-full aspect-video rounded-md" />
+          </div>
+          <div>
+            <Skeleton className="h-12 w-full mb-4" />
+            <Skeleton className="h-8 w-full mb-2" />
+            <Skeleton className="h-8 w-3/4 mb-4" />
+            <Skeleton className="h-32 w-full" />
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!course) {
     return (
-      <div className="flex justify-center items-center h-[calc(100vh-64px)]">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2">Curso não encontrado</h1>
-          <p className="text-muted-foreground">
-            O curso que você está procurando não existe ou foi removido.
-          </p>
-        </div>
+      <div className="container mx-auto py-8">
+        <p>Curso não encontrado</p>
+        <Button onClick={() => navigate('/cursos')}>Voltar para cursos</Button>
       </div>
     );
   }
 
-  if (!course.is_enrolled) {
-    navigate(`/cursos/${id}`);
-    return null;
-  }
-
   return (
-    <div className="flex h-[calc(100vh-64px)]">
-      <div className="w-80 shrink-0 overflow-hidden">
-        <CourseContent
-          course={course}
-          currentLessonId={currentLessonId}
-          onSelectLesson={setCurrentLessonId}
-        />
-      </div>
-      <div className="flex-1">
-        <CourseVideoPlayer
-          lesson={currentLesson}
-          onBack={() => navigate(`/cursos/${id}`)}
-        />
+    <div className="container mx-auto py-8">
+      <Button
+        variant="outline"
+        size="sm"
+        className="mb-4"
+        onClick={() => navigate(`/cursos/${id}`)}
+      >
+        <ChevronLeft className="h-4 w-4 mr-2" />
+        Voltar para detalhes do curso
+      </Button>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2">
+          {currentLesson ? (
+            <CourseVideoPlayer
+              title={currentLesson.title}
+              videoUrl={currentLesson.video_url || ''}
+            />
+          ) : (
+            <div className="aspect-video bg-muted rounded-md flex items-center justify-center">
+              <p className="text-muted-foreground">Selecione uma aula para assistir</p>
+            </div>
+          )}
+
+          {currentLesson && (
+            <div className="mt-6">
+              <h2 className="text-2xl font-bold">{currentLesson.title}</h2>
+              {currentLesson.description && <p className="mt-2">{currentLesson.description}</p>}
+            </div>
+          )}
+        </div>
+
+        <div>
+          <CourseContent
+            course={course as CourseWithDetails}
+            currentModuleId={currentModule?.id}
+            currentLessonId={currentLesson?.id}
+            onLessonSelect={handleLessonSelect}
+          />
+        </div>
       </div>
     </div>
   );

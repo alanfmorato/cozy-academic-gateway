@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Course, CourseCategory, CourseModule, CourseLesson, CourseMaterial } from '@/types/course';
@@ -127,8 +126,11 @@ export const useCourse = (courseId: string | undefined) => {
         .eq('course_id', courseId)
         .order('order_num');
 
-      if (modules) {
-        for (const module of modules) {
+      // Initialize empty lessons array for each module
+      const modulesWithLessons = modules ? [...modules].map(module => ({...module, lessons: []})) : [];
+
+      if (modulesWithLessons.length > 0) {
+        for (const module of modulesWithLessons) {
           const { data: lessons } = await supabase
             .from('course_lessons')
             .select('*')
@@ -168,7 +170,7 @@ export const useCourse = (courseId: string | undefined) => {
       return {
         ...data,
         difficulty_level: data.difficulty_level as 'iniciante' | 'intermediário' | 'avançado',
-        modules: modules || [],
+        modules: modulesWithLessons || [],
         materials: materials || [],
         average_rating: rating,
         total_students: count || 0,
