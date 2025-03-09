@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CourseForm } from '@/components/courses/CourseForm';
+import CourseForm from '@/components/courses/CourseForm';
 import { useCreateCourse } from '@/hooks/useCourses';
 import { toast } from '@/hooks/use-toast';
 import { Course } from '@/types/course';
