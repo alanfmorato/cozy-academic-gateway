@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom';
 import { PlusCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { CourseWithDetails } from '@/types/course';
 
 interface CourseFiltersState {
   search: string;
@@ -28,8 +29,11 @@ const Cursos = () => {
   const { data: courses, isLoading } = useCourses(filters);
   const { data: categories, isLoading: loadingCategories } = useCategories();
 
-  const handleFilterChange = (newFilters: CourseFiltersState) => {
-    setFilters(newFilters);
+  const handleFilterChange = (newFilters: Partial<CourseFiltersState>) => {
+    setFilters(prevFilters => ({
+      ...prevFilters,
+      ...newFilters
+    }));
   };
 
   return (
@@ -65,7 +69,7 @@ const Cursos = () => {
       ) : courses && courses.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {courses.map((course) => (
-            <CourseCard key={course.id} course={course} />
+            <CourseCard key={course.id} course={course as CourseWithDetails} />
           ))}
         </div>
       ) : (

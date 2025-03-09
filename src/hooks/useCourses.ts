@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Course, CourseCategory, CourseModule, CourseLesson, CourseMaterial } from '@/types/course';
@@ -54,7 +55,11 @@ export const useCourses = (filters?: {
 
       const coursesWithEnrollment = await Promise.all(
         data.map(async (course) => {
-          if (!user) return { ...course, is_enrolled: false };
+          if (!user) return { 
+            ...course, 
+            is_enrolled: false,
+            difficulty_level: course.difficulty_level as 'iniciante' | 'intermediário' | 'avançado'
+          };
 
           const { data: enrollment } = await supabase
             .from('course_enrollments')
@@ -76,7 +81,8 @@ export const useCourses = (filters?: {
             ...course,
             is_enrolled: !!enrollment,
             average_rating: rating,
-            total_students: count || 0
+            total_students: count || 0,
+            difficulty_level: course.difficulty_level as 'iniciante' | 'intermediário' | 'avançado'
           };
         })
       );
@@ -161,6 +167,7 @@ export const useCourse = (courseId: string | undefined) => {
 
       return {
         ...data,
+        difficulty_level: data.difficulty_level as 'iniciante' | 'intermediário' | 'avançado',
         modules: modules || [],
         materials: materials || [],
         average_rating: rating,
