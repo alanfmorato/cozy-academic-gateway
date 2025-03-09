@@ -16,6 +16,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Produto } from '@/types/moradia';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import ProdutoForm from '@/components/marketplace/ProdutoForm';
+import { Plus } from 'lucide-react';
 
 const Marketplace = () => {
   const [produtos, setProdutos] = useState<Produto[]>([]);
@@ -24,6 +26,7 @@ const Marketplace = () => {
   const [selectedUniversidade, setSelectedUniversidade] = useState<string>("all");
   const [universidades, setUniversidades] = useState<{id: string, nome: string}[]>([]);
   const [activeTab, setActiveTab] = useState("todos");
+  const [showForm, setShowForm] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -124,76 +127,104 @@ const Marketplace = () => {
     setSelectedUniversidade(value);
   };
 
+  const handleFormSuccess = () => {
+    setShowForm(false);
+    fetchProdutos();
+  };
+
   return (
     <div className="container mx-auto py-6">
-      <h1 className="text-3xl font-bold mb-6">Marketplace</h1>
-      
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
-        <div className="flex-1">
-          <Label htmlFor="search">Buscar produto</Label>
-          <Input
-            id="search"
-            placeholder="Buscar por título, descrição ou universidade..."
-            value={searchTerm}
-            onChange={handleSearch}
-          />
-        </div>
+      <div className="flex flex-col md:flex-row justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Marketplace</h1>
         
-        <div className="w-full md:w-64">
-          <Label htmlFor="universidade">Filtrar por universidade</Label>
-          <Select value={selectedUniversidade} onValueChange={handleUniversidadeChange}>
-            <SelectTrigger id="universidade">
-              <SelectValue placeholder="Todas universidades" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas universidades</SelectItem>
-              {universidades.map(uni => (
-                <SelectItem key={uni.id} value={uni.id}>{uni.nome}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {user && (
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList>
-            <TabsTrigger value="todos">Todos os produtos</TabsTrigger>
-            <TabsTrigger value="meus">Meus produtos</TabsTrigger>
-            <TabsTrigger value="vendidos">Produtos vendidos</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {isLoading ? (
-          <p>Carregando produtos...</p>
-        ) : getFilteredProdutos().length > 0 ? (
-          getFilteredProdutos().map(produto => (
-            <Card key={produto.id} className="overflow-hidden">
-              <CardContent className="p-4">
-                <h3 className="font-semibold text-lg">{produto.titulo}</h3>
-                <p className="text-gray-500 text-sm">
-                  {produto.universidade?.nome || "Universidade não especificada"}
-                </p>
-                <p className="my-2">{produto.descricao}</p>
-                <p className="font-bold text-lg">R$ {produto.valor.toFixed(2)}</p>
-                {produto.whatsapp && (
-                  <Button
-                    variant="outline"
-                    className="mt-4 w-full"
-                    onClick={() => window.open(`https://wa.me/${produto.whatsapp}`, '_blank')}
-                  >
-                    Contatar vendedor
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ))
-        ) : (
-          <p>Nenhum produto encontrado.</p>
+        {user && !showForm && (
+          <Button 
+            onClick={() => setShowForm(true)}
+            className="mt-4 md:mt-0"
+          >
+            <Plus className="mr-2 h-4 w-4" /> Cadastrar Produto
+          </Button>
         )}
       </div>
+      
+      {showForm ? (
+        <div className="mb-6">
+          <ProdutoForm 
+            universidades={universidades} 
+            onSuccess={handleFormSuccess} 
+            onCancel={() => setShowForm(false)} 
+          />
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="flex-1">
+              <Label htmlFor="search">Buscar produto</Label>
+              <Input
+                id="search"
+                placeholder="Buscar por título, descrição ou universidade..."
+                value={searchTerm}
+                onChange={handleSearch}
+              />
+            </div>
+            
+            <div className="w-full md:w-64">
+              <Label htmlFor="universidade">Filtrar por universidade</Label>
+              <Select value={selectedUniversidade} onValueChange={handleUniversidadeChange}>
+                <SelectTrigger id="universidade">
+                  <SelectValue placeholder="Todas universidades" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas universidades</SelectItem>
+                  {universidades.map(uni => (
+                    <SelectItem key={uni.id} value={uni.id}>{uni.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {user && (
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+              <TabsList>
+                <TabsTrigger value="todos">Todos os produtos</TabsTrigger>
+                <TabsTrigger value="meus">Meus produtos</TabsTrigger>
+                <TabsTrigger value="vendidos">Produtos vendidos</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {isLoading ? (
+              <p>Carregando produtos...</p>
+            ) : getFilteredProdutos().length > 0 ? (
+              getFilteredProdutos().map(produto => (
+                <Card key={produto.id} className="overflow-hidden">
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold text-lg">{produto.titulo}</h3>
+                    <p className="text-gray-500 text-sm">
+                      {produto.universidade?.nome || "Universidade não especificada"}
+                    </p>
+                    <p className="my-2">{produto.descricao}</p>
+                    <p className="font-bold text-lg">R$ {produto.valor.toFixed(2)}</p>
+                    {produto.whatsapp && (
+                      <Button
+                        variant="outline"
+                        className="mt-4 w-full"
+                        onClick={() => window.open(`https://wa.me/${produto.whatsapp}`, '_blank')}
+                      >
+                        Contatar vendedor
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <p>Nenhum produto encontrado.</p>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 };
