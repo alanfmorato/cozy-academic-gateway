@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Course, CourseCategory, CourseModule, CourseLesson, CourseMaterial } from '@/types/course';
@@ -127,7 +126,6 @@ export const useCourse = (courseId: string | undefined) => {
         .eq('course_id', courseId)
         .order('order_num');
 
-      // Initialize empty lessons array for each module
       const modulesWithLessons = modules ? [...modules].map(module => ({...module, lessons: []})) : [];
 
       if (modulesWithLessons.length > 0) {
@@ -191,7 +189,6 @@ export const useUserCourses = () => {
     queryFn: async () => {
       if (!user) return [];
 
-      // Fetch courses created by user
       const { data: createdCourses, error: createdError } = await supabase
         .from('courses')
         .select(`
@@ -209,7 +206,6 @@ export const useUserCourses = () => {
         throw createdError;
       }
 
-      // Fetch courses enrolled by user
       const { data: enrollments, error: enrolledError } = await supabase
         .from('course_enrollments')
         .select(`
@@ -324,7 +320,6 @@ export const useCreateCourse = () => {
         throw new Error('Usuário não autenticado');
       }
 
-      // Ensure required fields are present
       if (!courseData.title || !courseData.description || !courseData.duration || 
           !courseData.language || !courseData.difficulty_level) {
         throw new Error('Campos obrigatórios não preenchidos');
@@ -416,7 +411,6 @@ export const useCreateModule = (courseId: string) => {
 
   return useMutation({
     mutationFn: async (moduleData: Partial<CourseModule>) => {
-      // Get the maximum order number
       const { data: existingModules } = await supabase
         .from('course_modules')
         .select('order_num')
@@ -428,7 +422,6 @@ export const useCreateModule = (courseId: string) => {
         ? existingModules[0].order_num + 1 
         : 1;
 
-      // Ensure title is present
       if (!moduleData.title) {
         throw new Error('Título do módulo é obrigatório');
       }
@@ -473,7 +466,6 @@ export const useCreateLesson = (moduleId: string, courseId: string) => {
 
   return useMutation({
     mutationFn: async (lessonData: Partial<CourseLesson>) => {
-      // Get the maximum order number
       const { data: existingLessons } = await supabase
         .from('course_lessons')
         .select('order_num')
@@ -485,7 +477,6 @@ export const useCreateLesson = (moduleId: string, courseId: string) => {
         ? existingLessons[0].order_num + 1 
         : 1;
 
-      // Ensure title is present
       if (!lessonData.title) {
         throw new Error('Título da aula é obrigatório');
       }
@@ -542,7 +533,6 @@ export const useAddMaterial = (courseId: string) => {
       description?: string; 
       lessonId?: string;
     }) => {
-      // Upload file to storage
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
       const filePath = `${courseId}/${fileName}`;
@@ -555,12 +545,10 @@ export const useAddMaterial = (courseId: string) => {
         throw uploadError;
       }
 
-      // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('course-materials')
         .getPublicUrl(filePath);
 
-      // Save to database
       const { data, error } = await supabase
         .from('course_materials')
         .insert({
