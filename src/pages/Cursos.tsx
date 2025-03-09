@@ -9,24 +9,26 @@ import { PlusCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from '@/hooks/use-toast';
 
+interface CourseFiltersState {
+  search: string;
+  categoryId: string | undefined;
+  difficulty: string | undefined;
+  priceRange: [number, number];
+}
+
 const Cursos = () => {
   const { user } = useAuth();
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<CourseFiltersState>({
     search: '',
-    categoryId: undefined as string | undefined,
-    difficulty: undefined as string | undefined,
-    priceRange: [0, 1000] as [number, number],
+    categoryId: undefined,
+    difficulty: undefined,
+    priceRange: [0, 1000],
   });
 
   const { data: courses, isLoading } = useCourses(filters);
   const { data: categories, isLoading: loadingCategories } = useCategories();
 
-  const handleFilterChange = (newFilters: {
-    search: string;
-    categoryId?: string;
-    difficulty?: string;
-    priceRange: [number, number];
-  }) => {
+  const handleFilterChange = (newFilters: CourseFiltersState) => {
     setFilters(newFilters);
   };
 

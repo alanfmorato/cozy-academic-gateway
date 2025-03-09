@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Course, CourseCategory, CourseModule, CourseLesson, CourseMaterial } from '@/types/course';
@@ -314,10 +313,25 @@ export const useCreateCourse = () => {
         throw new Error('Usuário não autenticado');
       }
 
+      // Ensure required fields are present
+      if (!courseData.title || !courseData.description || !courseData.duration || 
+          !courseData.language || !courseData.difficulty_level) {
+        throw new Error('Campos obrigatórios não preenchidos');
+      }
+
       const { data, error } = await supabase
         .from('courses')
         .insert({
-          ...courseData,
+          title: courseData.title,
+          description: courseData.description,
+          category_id: courseData.category_id,
+          duration: courseData.duration,
+          language: courseData.language,
+          difficulty_level: courseData.difficulty_level,
+          price: courseData.price || 0,
+          thumbnail_url: courseData.thumbnail_url || null,
+          preview_video_url: courseData.preview_video_url || null,
+          is_published: courseData.is_published || false,
           created_by: user.id
         })
         .select()
@@ -391,11 +405,30 @@ export const useCreateModule = (courseId: string) => {
 
   return useMutation({
     mutationFn: async (moduleData: Partial<CourseModule>) => {
+      // Get the maximum order number
+      const { data: existingModules } = await supabase
+        .from('course_modules')
+        .select('order_num')
+        .eq('course_id', courseId)
+        .order('order_num', { ascending: false })
+        .limit(1);
+      
+      const nextOrderNum = existingModules && existingModules.length > 0 
+        ? existingModules[0].order_num + 1 
+        : 1;
+
+      // Ensure title is present
+      if (!moduleData.title) {
+        throw new Error('Título do módulo é obrigatório');
+      }
+
       const { data, error } = await supabase
         .from('course_modules')
         .insert({
-          ...moduleData,
-          course_id: courseId
+          title: moduleData.title,
+          description: moduleData.description || null,
+          course_id: courseId,
+          order_num: nextOrderNum
         })
         .select()
         .single();
@@ -429,11 +462,32 @@ export const useCreateLesson = (moduleId: string, courseId: string) => {
 
   return useMutation({
     mutationFn: async (lessonData: Partial<CourseLesson>) => {
+      // Get the maximum order number
+      const { data: existingLessons } = await supabase
+        .from('course_lessons')
+        .select('order_num')
+        .eq('module_id', moduleId)
+        .order('order_num', { ascending: false })
+        .limit(1);
+      
+      const nextOrderNum = existingLessons && existingLessons.length > 0 
+        ? existingLessons[0].order_num + 1 
+        : 1;
+
+      // Ensure title is present
+      if (!lessonData.title) {
+        throw new Error('Título da aula é obrigatório');
+      }
+
       const { data, error } = await supabase
         .from('course_lessons')
         .insert({
-          ...lessonData,
-          module_id: moduleId
+          title: lessonData.title,
+          description: lessonData.description || null,
+          video_url: lessonData.video_url || null,
+          duration: lessonData.duration || null,
+          module_id: moduleId,
+          order_num: nextOrderNum
         })
         .select()
         .single();

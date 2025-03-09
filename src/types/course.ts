@@ -30,6 +30,7 @@ export interface CourseModule {
   description: string | null;
   order_num: number;
   created_at: string;
+  lessons?: CourseLesson[]; // Add lessons property
 }
 
 export interface CourseLesson {
@@ -77,6 +78,7 @@ export interface CourseReview {
 export interface CourseWithDetails extends Course {
   category?: CourseCategory;
   modules?: CourseModule[];
+  materials?: CourseMaterial[]; // Add materials property
   average_rating?: number;
   total_students?: number;
   is_enrolled?: boolean;
