@@ -28,7 +28,6 @@ interface SidebarProps {
   closeMenu: () => void;
 }
 
-// Added key to force re-render when needed
 const Sidebar: React.FC<SidebarProps> = ({ menuOpen, setMenuOpen, closeMenu }) => {
   const { user } = useAuth();
   const location = useLocation();
@@ -63,19 +62,29 @@ const Sidebar: React.FC<SidebarProps> = ({ menuOpen, setMenuOpen, closeMenu }) =
   return (
     <aside
       className={cn(
-        "fixed inset-y-0 left-0 z-40 w-64 bg-card border-r border-border transition-transform duration-300 ease-in-out transform glass-morphism md:translate-x-0",
+        "fixed inset-y-0 left-0 z-50 w-[85vw] max-w-64 bg-card border-r border-border transition-transform duration-300 ease-in-out transform glass-morphism md:translate-x-0",
         menuOpen ? "translate-x-0" : "-translate-x-full"
       )}
     >
       <div className="flex flex-col h-full">
-        <div className="p-6">
-          <h2 className="text-2xl font-bold tracking-tight">NewsUniversity</h2>
-          <p className="text-muted-foreground text-sm mt-1">
-            Sua plataforma acadêmica
-          </p>
+        <div className="p-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold tracking-tight">NewsUniversity</h2>
+            <p className="text-muted-foreground text-xs mt-1">
+              Sua plataforma acadêmica
+            </p>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="md:hidden" 
+            onClick={closeMenu}
+          >
+            <X size={18} />
+          </Button>
         </div>
 
-        <nav className="flex-1 px-2 py-4 space-y-1">
+        <nav className="flex-1 px-2 py-2 space-y-1 overflow-y-auto scrollbar-thin">
           {routes.map((route) => (
             <NavLink
               key={route.path}
@@ -96,11 +105,11 @@ const Sidebar: React.FC<SidebarProps> = ({ menuOpen, setMenuOpen, closeMenu }) =
             <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
               {user.user_metadata.full_name?.[0] || user.email?.[0] || "U"}
             </div>
-            <div>
-              <p className="font-medium truncate">
+            <div className="overflow-hidden">
+              <p className="font-medium truncate text-sm">
                 {user.user_metadata.full_name || user.email}
               </p>
-              <p className="text-sm text-muted-foreground truncate">
+              <p className="text-xs text-muted-foreground truncate">
                 {user.email}
               </p>
             </div>
