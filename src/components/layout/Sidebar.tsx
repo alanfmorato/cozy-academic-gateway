@@ -101,28 +101,42 @@ const Sidebar: React.FC<SidebarProps> = ({ menuOpen, setMenuOpen, closeMenu }) =
           <div className="flex justify-center mb-3">
             <ThemeToggle />
           </div>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-              {user.user_metadata.full_name?.[0] || user.email?.[0] || "U"}
+          {user ? (
+            <>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                  {user.user_metadata?.full_name?.[0] || user.email?.[0] || "U"}
+                </div>
+                <div className="overflow-hidden">
+                  <p className="font-medium truncate text-sm">
+                    {user.user_metadata?.full_name || user.email}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {user.email}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="destructive"
+                className="w-full"
+                onClick={handleLogout}
+                size="sm"
+              >
+                <LogOut size={16} className="mr-2" />
+                Sair
+              </Button>
+            </>
+          ) : (
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                U
+              </div>
+              <div className="overflow-hidden">
+                <p className="font-medium truncate text-sm">Usuário</p>
+                <p className="text-xs text-muted-foreground truncate">Visitante</p>
+              </div>
             </div>
-            <div className="overflow-hidden">
-              <p className="font-medium truncate text-sm">
-                {user.user_metadata.full_name || user.email}
-              </p>
-              <p className="text-xs text-muted-foreground truncate">
-                {user.email}
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="destructive"
-            className="w-full"
-            onClick={handleLogout}
-            size="sm"
-          >
-            <LogOut size={16} className="mr-2" />
-            Sair
-          </Button>
+          )}
         </div>
       </div>
     </aside>
