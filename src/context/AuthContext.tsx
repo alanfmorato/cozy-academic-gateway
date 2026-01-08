@@ -75,10 +75,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (newSession && location.pathname === "/auth") {
       console.log("Redirecting to home page after login");
       navigate("/", { replace: true });
-    } else if (!newSession && location.pathname !== "/auth") {
-      console.log("Redirecting to auth page after logout");
-      navigate("/auth", { replace: true });
     }
+    // Removed redirect to /auth when not logged in - allows viewing without auth
   }, [navigate, location.pathname]);
 
   // Redirect logic based on auth state and current location
